@@ -325,6 +325,7 @@ import {
   actionToggleArrowBinding,
   actionToggleMidpointSnapping,
   actionToggleCropEditor,
+  actionDownloadOriginalImage,
 } from "../actions";
 import { actionWrapTextInContainer } from "../actions/actionBoundText";
 import { actionPaste } from "../actions/actionClipboard";
@@ -380,7 +381,6 @@ import {
   loadSceneOrLibraryFromBlob,
   normalizeFile,
   parseLibraryJSON,
-  resizeImageFile,
   SVGStringToFile,
 } from "../data/blob";
 
@@ -12632,30 +12632,12 @@ class App extends React.Component<AppProps, AppState> {
       throw new Error(t("errors.imageInsertError"));
     }
 
-    const existingFileData = this.files[fileId];
-    if (!existingFileData?.dataURL) {
-      const { maxWidthOrHeight, maxFileSizeBytes } = this.props.imageOptions;
-
-      try {
-        imageFile = await resizeImageFile(imageFile, {
-          maxWidthOrHeight,
-        });
-      } catch (error: any) {
-        console.error(
-          "Error trying to resizing image file on insertion",
-          error,
-        );
-      }
-
-      if (imageFile.size > maxFileSizeBytes) {
-        throw new Error(
-          t("errors.fileTooBig", {
-            maxSize: `${Math.trunc(maxFileSizeBytes / 1024 / 1024)}MB`,
-          }),
-        );
-      }
-    }
-
+    // NOTE: fork customization — keep the original image file as-is.
+    // Upstream Excalidraw resizes the image (imageOptions.maxWidthOrHeight)
+    // and rejects files larger than imageOptions.maxFileSizeBytes here.
+    // We intentionally skip both so inserted images are never compressed
+    // or rejected due to size, and the original bytes are preserved
+    // (also enabling "download original image" to return the exact file).
     const dataURL =
       this.files[fileId]?.dataURL || (await getDataURL(imageFile));
 
@@ -13705,6 +13687,7 @@ class App extends React.Component<AppProps, AppState> {
       actionWrapSelectionInFrame,
       CONTEXT_MENU_SEPARATOR,
       actionToggleCropEditor,
+      actionDownloadOriginalImage,
       CONTEXT_MENU_SEPARATOR,
       ...options,
       CONTEXT_MENU_SEPARATOR,

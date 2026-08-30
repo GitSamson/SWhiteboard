@@ -63,6 +63,7 @@
     "build": "yarn --cwd ./excalidraw-app build",
     "build:preview": "yarn --cwd ./excalidraw-app build:preview",
     "start": "yarn --cwd ./excalidraw-app start",
+    "dev": "yarn --cwd ./excalidraw-app start",
     "start:production": "yarn --cwd ./excalidraw-app start:production",
     "start:example": "yarn build:packages && yarn --cwd ./examples/with-script-in-browser start",
     "test:all": "yarn test:typecheck && yarn test:code && yarn test:other && yarn test:app --watch=false",

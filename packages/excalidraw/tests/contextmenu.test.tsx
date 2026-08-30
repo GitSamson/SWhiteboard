@@ -601,6 +601,84 @@ describe("contextMenu element", () => {
     expect(h.elements[1].groupIds).toHaveLength(0);
   });
 
+  it("downloads all selected images via 'Download original image' context menu item", async () => {
+    const image1 = API.createElement({
+      type: "image",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      fileId: "fileId1" as any,
+    });
+    const image2 = API.createElement({
+      type: "image",
+      x: 200,
+      y: 0,
+      width: 100,
+      height: 100,
+      fileId: "fileId2" as any,
+    });
+    API.setElements([image1, image2]);
+    API.setSelectedElements([image1, image2]);
+
+    h.app.files["fileId1" as any] = {
+      mimeType: "image/png",
+      id: "fileId1",
+      dataURL: "data:image/png;base64,iVBORw0KGgo=",
+      created: Date.now(),
+      lastRetrieved: Date.now(),
+    } as any;
+    h.app.files["fileId2" as any] = {
+      mimeType: "image/jpeg",
+      id: "fileId2",
+      dataURL: "data:image/jpeg;base64,iVBORw0KGgo=",
+      created: Date.now(),
+      lastRetrieved: Date.now(),
+    } as any;
+
+    fireEvent.contextMenu(GlobalTestState.interactiveCanvas, {
+      button: 2,
+      clientX: 50,
+      clientY: 50,
+    });
+
+    const contextMenu = UI.queryContextMenu();
+    expect(contextMenu).not.toBeNull();
+    const menuItem = contextMenu?.querySelector(
+      'li[data-testid="downloadOriginalImage"]',
+    );
+    expect(menuItem).not.toBeNull();
+
+    // clicking it should trigger a download for every selected image
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+    fireEvent.click(menuItem!);
+    // first image downloads immediately
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    // subsequent images are staggered to avoid browser throttling
+    await waitFor(() => expect(clickSpy).toHaveBeenCalledTimes(2));
+    clickSpy.mockRestore();
+  });
+
+  it("does not show 'Download original image' for non-image elements", () => {
+    UI.clickTool("rectangle");
+    mouse.down(0, 0);
+    mouse.up(10, 10);
+
+    fireEvent.contextMenu(GlobalTestState.interactiveCanvas, {
+      button: 2,
+      clientX: 3,
+      clientY: 3,
+    });
+
+    const contextMenu = UI.queryContextMenu();
+    expect(contextMenu).not.toBeNull();
+    expect(
+      contextMenu?.querySelector('li[data-testid="downloadOriginalImage"]'),
+    ).toBeNull();
+  });
+
   it("right-clicking on a group should select whole group", () => {
     const rectangle1 = API.createElement({
       type: "rectangle",

@@ -136,9 +136,9 @@ describe("image insertion", () => {
     await assert();
   });
 
-  it("passes host-configured max image dimensions to the resize helper", async () => {
+  it("keeps the original image regardless of host-configured max dimensions", async () => {
     await setupImageTest([DEER_IMAGE_DIMENSIONS], {
-      imageOptions: { maxWidthOrHeight: 2048 },
+      imageOptions: { maxWidthOrHeight: 100 },
     });
 
     await API.drop([
@@ -146,16 +146,21 @@ describe("image insertion", () => {
     ]);
 
     await waitFor(() => {
-      expect(blobModule.resizeImageFile).toHaveBeenCalledWith(
-        expect.any(File),
-        { maxWidthOrHeight: 2048 },
-      );
+      expect(h.elements).toEqual([
+        expect.objectContaining({
+          ...INITIALIZED_IMAGE_PROPS,
+          ...DEER_IMAGE_DIMENSIONS,
+        }),
+      ]);
     });
+
+    // fork behavior: inserted images are never resized/compressed
+    expect(blobModule.resizeImageFile).not.toHaveBeenCalled();
   });
 
-  it("enforces host-configured max image file size", async () => {
-    await setupImageTest([DEER_IMAGE_DIMENSIONS], {
-      imageOptions: { maxFileSizeBytes: 1024 * 1024 },
+  it("accepts images larger than host-configured max file size", async () => {
+    await setupImageTest([{ width: 100, height: 100 }], {
+      imageOptions: { maxFileSizeBytes: 1024 },
     });
 
     await API.drop([
@@ -168,9 +173,9 @@ describe("image insertion", () => {
     ]);
 
     await waitFor(() => {
-      expect(h.state.errorMessage).toBe(
-        "File is too big. Maximum allowed size is 1MB.",
-      );
+      expect(h.elements.length).toBe(1);
     });
+    // fork behavior: no file size rejection
+    expect(h.state.errorMessage).toBe(null);
   });
 });
