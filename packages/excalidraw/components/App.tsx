@@ -326,6 +326,12 @@ import {
   actionToggleMidpointSnapping,
   actionToggleCropEditor,
   actionDownloadOriginalImage,
+  actionConvertToLinked,
+  actionConvertToEmbedded,
+  actionRenameLinkedImage,
+  actionShowHiddenImages,
+  actionDeleteHiddenImages,
+  actionResetSyncFrameLayout,
 } from "../actions";
 import { actionWrapTextInContainer } from "../actions/actionBoundText";
 import { actionPaste } from "../actions/actionClipboard";
@@ -341,6 +347,8 @@ import { actionTextAutoResize } from "../actions/actionTextAutoResize";
 import { actionToggleViewMode } from "../actions/actionToggleViewMode";
 import { ActionManager } from "../actions/manager";
 import { actions } from "../actions/register";
+import { getLinkedAssetsBridge } from "../linkedAssetsBridge";
+
 import { getShortcutFromShortcutName } from "../actions/shortcuts";
 import { trackEvent } from "../analytics";
 import {
@@ -456,6 +464,8 @@ import { AppStateObserver, type OnStateChange } from "./AppStateObserver";
 import { findShapeByKey, TOGGLE_TOOLS } from "./Tools";
 
 import UnlockPopup from "./UnlockPopup";
+
+import type { LinkedImageInsertSource } from "../linkedAssetsBridge";
 
 import type { ExcalidrawLibraryIds } from "../data/types";
 
@@ -4538,7 +4548,7 @@ class App extends React.Component<AppProps, AppState> {
 
     if (imageFiles.length > 0) {
       if (this.isToolSupported("image")) {
-        await this.insertImages(imageFiles, sceneX, sceneY);
+        await this.insertImages(imageFiles, sceneX, sceneY, "paste");
       } else {
         this.setState({ errorMessage: t("errors.imageToolNotSupported") });
       }
@@ -4890,7 +4900,7 @@ class App extends React.Component<AppProps, AppState> {
       const imageFiles = responses
         .filter((response): response is { file: File } => !!response.file)
         .map((response) => response.file);
-      await this.insertImages(imageFiles, sceneX, sceneY);
+      await this.insertImages(imageFiles, sceneX, sceneY, "paste");
       const error = responses.find((response) => !!response.errorMessage);
       if (error && error.errorMessage) {
         this.setState({ errorMessage: error.errorMessage });
@@ -5199,18 +5209,31 @@ class App extends React.Component<AppProps, AppState> {
 
   /**
    * adds supplied files to existing files in the appState.
-   * NOTE if file already exists in editor state, the file data is not updated
+   * NOTE by default, if a file already exists in editor state, its data is
+   * not updated; pass `opts.replace` to overwrite existing entries (used by
+   * the linked-assets feature to swap originals for thumbnails and back)
    * */
-  public addFiles: ExcalidrawImperativeAPI["addFiles"] = withBatchedUpdates(
-    (files) => {
+  public addFiles: ExcalidrawImperativeAPI["addFiles"] = (files, opts) => {
+    // NOTE withBatchedUpdates only forwards a single argument, hence the
+    // closure wrapper
+    withBatchedUpdates(() => {
+      if (opts?.replace) {
+        // drop existing entries so addMissingFiles re-adds the new data
+        const nextFiles = { ...this.files };
+        for (const fileData of files) {
+          delete nextFiles[fileData.id];
+        }
+        this.files = nextFiles;
+      }
+
       const { addedFiles } = this.addMissingFiles(files);
 
       this.clearImageShapeCache(addedFiles);
       this.scene.triggerUpdate();
 
       this.addNewImagesToImageCache();
-    },
-  );
+    })();
+  };
 
   private addMissingFiles = (
     files: BinaryFiles | BinaryFileData[],
@@ -12738,7 +12761,7 @@ class App extends React.Component<AppProps, AppState> {
         multiple: true,
       });
 
-      this.insertImages(imageFiles, x, y);
+      this.insertImages(imageFiles, x, y, "toolbar");
     } catch (error: any) {
       if (error.name !== "AbortError") {
         console.error(error);
@@ -12915,6 +12938,7 @@ class App extends React.Component<AppProps, AppState> {
     imageFiles: File[],
     sceneX: number,
     sceneY: number,
+    source?: LinkedImageInsertSource,
   ) => {
     const gridPadding = 50 / this.state.zoom.value;
     // Create, position, and insert placeholders
@@ -12968,6 +12992,27 @@ class App extends React.Component<AppProps, AppState> {
       elements: nextElements,
       captureUpdate: CaptureUpdateAction.IMMEDIATELY,
     });
+
+    // notify the linked-assets bridge (app layer) about the insertion source;
+    // fire-and-forget so insertion is never blocked by it
+    if (source) {
+      try {
+        const insertedFiles: BinaryFiles = {};
+        for (const element of positioned) {
+          const fileData = element.fileId && this.files[element.fileId];
+          if (fileData) {
+            insertedFiles[fileData.id] = fileData;
+          }
+        }
+        getLinkedAssetsBridge()?.onImagesInserted(
+          source,
+          insertedFiles,
+          positioned,
+        );
+      } catch (error) {
+        console.error(error);
+      }
+    }
 
     this.setState({}, () => {
       // actionFinalize after all state values have been updated
@@ -13027,7 +13072,7 @@ class App extends React.Component<AppProps, AppState> {
       .filter((file) => isSupportedImageFile(file));
 
     if (imageFiles.length > 0 && this.isToolSupported("image")) {
-      return this.insertImages(imageFiles, sceneX, sceneY);
+      return this.insertImages(imageFiles, sceneX, sceneY, "drop");
     }
     const excalidrawLibrary_ids = dataTransferList.getData(
       MIME_TYPES.excalidrawlibIds,
@@ -13688,6 +13733,12 @@ class App extends React.Component<AppProps, AppState> {
       CONTEXT_MENU_SEPARATOR,
       actionToggleCropEditor,
       actionDownloadOriginalImage,
+      actionConvertToLinked,
+      actionConvertToEmbedded,
+      actionRenameLinkedImage,
+      actionShowHiddenImages,
+      actionDeleteHiddenImages,
+      actionResetSyncFrameLayout,
       CONTEXT_MENU_SEPARATOR,
       ...options,
       CONTEXT_MENU_SEPARATOR,

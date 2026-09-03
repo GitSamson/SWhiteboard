@@ -1,10 +1,15 @@
 import { DefaultSidebar, Sidebar, THEME } from "@excalidraw/excalidraw";
 import {
+  LinkIcon,
   messageCircleIcon,
   presentationIcon,
 } from "@excalidraw/excalidraw/components/icons";
 import { LinkButton } from "@excalidraw/excalidraw/components/LinkButton";
 import { useUIAppState } from "@excalidraw/excalidraw/context/ui-appState";
+
+import { useAtomValue } from "../app-jotai";
+import { linkedAssetsSupportedAtom } from "../linkedAssets/state";
+import { SyncFoldersPanel } from "../linkedAssets/ui/SyncFoldersPanel";
 
 import "./AppSidebar.scss";
 
@@ -67,10 +72,19 @@ const SidebarPromoCopy = (props: SidebarPromoCopyProps) => {
 
 export const AppSidebar = () => {
   const { theme, openSidebar } = useUIAppState();
+  const linkedAssetsSupported = useAtomValue(linkedAssetsSupportedAtom);
 
   return (
     <DefaultSidebar>
       <DefaultSidebar.TabTriggers>
+        {linkedAssetsSupported && (
+          <Sidebar.TabTrigger
+            tab="linkedAssets"
+            style={{ opacity: openSidebar?.tab === "linkedAssets" ? 1 : 0.4 }}
+          >
+            {LinkIcon}
+          </Sidebar.TabTrigger>
+        )}
         <Sidebar.TabTrigger
           tab="comments"
           style={{ opacity: openSidebar?.tab === "comments" ? 1 : 0.4 }}
@@ -84,6 +98,11 @@ export const AppSidebar = () => {
           {presentationIcon}
         </Sidebar.TabTrigger>
       </DefaultSidebar.TabTriggers>
+      {linkedAssetsSupported && (
+        <Sidebar.Tab tab="linkedAssets">
+          <SyncFoldersPanel />
+        </Sidebar.Tab>
+      )}
       <Sidebar.Tab tab="comments">
         <div className="app-sidebar-promo-container">
           <div

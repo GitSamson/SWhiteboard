@@ -186,6 +186,9 @@
     "unCroppedDimension": "Uncropped dimension",
     "copyElementLink": "Copy link to object",
     "downloadOriginalImage": "Download original image",
+    "createSyncFrame": "Create sync frame",
+    "convertToLinked": "Link file to folder",
+    "convertToEmbedded": "Embed file into scene",
     "linkToElement": "Link to object",
     "wrapSelectionInFrame": "Wrap selection in frame",
     "tab": "Tab",
@@ -196,7 +199,11 @@
     "boxSelectionContain": "Wrap",
     "boxSelectionOverlap": "Overlap",
     "arrowBinding": "Arrow binding",
-    "midpointSnapping": "Snap to midpoints"
+    "midpointSnapping": "Snap to midpoints",
+    "renameLinkedImage": "Rename linked image",
+    "showHiddenImages": "Show hidden images",
+    "deleteHiddenImages": "Delete hidden images",
+    "resetSyncFrameLayout": "Reset layout"
   },
   "elementLink": {
     "title": "Link to object",
@@ -753,5 +760,15 @@
     "spacebar": "Space",
     "delete": "Delete",
     "mmb": "Scroll wheel"
+  },
+  "linkedAssets": {
+    "missingBanner": "Linked images missing from their folder: {{count}}",
+    "clearMissing": "Remove all",
+    "unsupported": "This scene contains linked files. This browser cannot load the originals, so thumbnails are shown.",
+    "renameTitle": "Rename linked image",
+    "renameConfirm": "Rename",
+    "syncFoldersTitle": "Synced folders",
+    "syncFoldersEmpty": "No synced folders on this canvas yet.",
+    "syncFolderFileCount": "{{count}} files"
   }
 }

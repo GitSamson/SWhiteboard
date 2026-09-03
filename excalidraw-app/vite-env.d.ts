@@ -38,6 +38,10 @@ interface ImportMetaEnv {
 
   VITE_APP_GIT_SHA: string;
 
+  // Enable linked file assets (sync frames bound to local folders via the
+  // File System Access API). Compared as a string, e.g. `=== "true"`.
+  VITE_APP_ENABLE_LINKED_FILES: string;
+
   MODE: string;
 
   DEV: string;

@@ -31,6 +31,44 @@ export const loadHTMLImageElement = (dataURL: DataURL) => {
   });
 };
 
+/**
+ * Optional resolver injected by the app-layer "linked file assets" feature.
+ * Before the cache decodes `fileData.dataURL` (which for linked images is
+ * only a low-res thumbnail), the resolver may return the original
+ * full-resolution dataURL read from disk. Returning `null` (or throwing)
+ * falls back to the embedded dataURL. Affects the render cache only — the
+ * scene's `files` map is never mutated.
+ */
+export type LinkedImageResolver = (
+  fileId: FileId,
+  fileData: BinaryFiles[string],
+) => Promise<DataURL | null>;
+
+let linkedImageResolver: LinkedImageResolver | null = null;
+
+export const setLinkedImageResolver = (
+  resolver: LinkedImageResolver | null,
+): void => {
+  linkedImageResolver = resolver;
+};
+
+const resolveLinkedOriginal = async (
+  fileId: FileId,
+  fileData: BinaryFiles[string],
+): Promise<DataURL> => {
+  if (linkedImageResolver) {
+    try {
+      const resolved = await linkedImageResolver(fileId, fileData);
+      if (resolved) {
+        return resolved;
+      }
+    } catch (error) {
+      console.warn("linked image resolver failed, using embedded", error);
+    }
+  }
+  return fileData.dataURL;
+};
+
 /** NOTE: updates cache even if already populated with given image. Thus,
  * you should filter out the images upstream if you want to optimize this. */
 export const updateImageCache = async ({
@@ -57,7 +95,9 @@ export const updateImageCache = async ({
                 throw new Error("Only images can be added to ImageCache");
               }
 
-              const imagePromise = loadHTMLImageElement(fileData.dataURL);
+              const imagePromise = resolveLinkedOriginal(fileId, fileData).then(
+                (dataURL) => loadHTMLImageElement(dataURL),
+              );
               const data = {
                 image: imagePromise,
                 mimeType: fileData.mimeType,

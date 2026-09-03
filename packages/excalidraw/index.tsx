@@ -459,6 +459,18 @@ export {
 
 export { CaptureUpdateAction } from "@excalidraw/element";
 
+export { setLinkedImageResolver } from "@excalidraw/element";
+export type { LinkedImageResolver } from "@excalidraw/element";
+
+export {
+  setLinkedAssetsBridge,
+  getLinkedAssetsBridge,
+} from "./linkedAssetsBridge";
+export type {
+  LinkedAssetsBridge,
+  LinkedImageInsertSource,
+} from "./linkedAssetsBridge";
+
 export { parseLibraryTokensFromUrl, useHandleLibrary } from "./data/library";
 
 export { Sidebar } from "./components/Sidebar/Sidebar";

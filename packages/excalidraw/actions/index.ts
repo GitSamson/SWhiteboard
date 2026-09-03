@@ -93,3 +93,13 @@ export { actionToggleSearchMenu } from "./actionToggleSearchMenu";
 
 export { actionToggleCropEditor } from "./actionCropEditor";
 export { actionDownloadOriginalImage } from "./actionDownloadOriginalImage";
+export {
+  actionConvertToLinked,
+  actionConvertToEmbedded,
+  actionRenameLinkedImage,
+} from "./actionLinkedFiles";
+export {
+  actionShowHiddenImages,
+  actionDeleteHiddenImages,
+  actionResetSyncFrameLayout,
+} from "./actionSyncFrame";

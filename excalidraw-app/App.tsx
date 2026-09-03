@@ -101,6 +101,13 @@ import Collab, {
 } from "./collab/Collab";
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
+import {
+  createSyncFrame,
+  initLinkedAssets,
+  isLinkedAssetsAvailable,
+} from "./linkedAssets";
+import { MissingLinkedBanner } from "./linkedAssets/ui/MissingLinkedBanner";
+import { RenameLinkedImageDialog } from "./linkedAssets/ui/RenameLinkedImageDialog";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
 import {
   ExportToExcalidrawPlus,
@@ -449,6 +456,43 @@ const ExcalidrawWrapper = () => {
     // TODO maybe remove this in several months (shipped: 24-03-11)
     migrationAdapter: LibraryLocalStorageMigrationAdapter,
   });
+
+  // linked file assets: inject the app-layer bridge once the API is ready
+  useEffect(() => {
+    if (!excalidrawAPI) {
+      return;
+    }
+    return initLinkedAssets(excalidrawAPI);
+  }, [excalidrawAPI]);
+
+  // linked file assets: warn once when a scene contains linked files but
+  // this browser/device can't load the originals
+  useEffect(() => {
+    if (!excalidrawAPI) {
+      return;
+    }
+    let cancelled = false;
+    void initialStatePromiseRef.current.promise.then(() => {
+      if (cancelled) {
+        return;
+      }
+      const hasLinkedFiles = excalidrawAPI
+        .getSceneElementsIncludingDeleted()
+        .some((element) => !!element.customData?.linkedFile);
+      if (
+        hasLinkedFiles &&
+        (!isLinkedAssetsAvailable() || editorInterface.formFactor !== "desktop")
+      ) {
+        excalidrawAPI.setToast({
+          message: t("linkedAssets.unsupported"),
+          duration: 6000,
+        });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [excalidrawAPI, editorInterface.formFactor]);
 
   const [, forceRefresh] = useState(false);
 
@@ -1033,7 +1077,18 @@ const ExcalidrawWrapper = () => {
           isCollabEnabled={!isCollabDisabled}
           theme={appTheme}
           refresh={() => forceRefresh((prev) => !prev)}
+          onCreateSyncFrame={
+            isLinkedAssetsAvailable() &&
+            editorInterface.formFactor === "desktop" &&
+            excalidrawAPI
+              ? () => {
+                  void createSyncFrame(excalidrawAPI);
+                }
+              : undefined
+          }
         />
+        <MissingLinkedBanner />
+        <RenameLinkedImageDialog />
         <AppWelcomeScreen
           onCollabDialogOpen={onCollabDialogOpen}
           isCollabEnabled={!isCollabDisabled}

@@ -759,6 +759,14 @@ export const renderElement = (
               : applyDarkModeFilter("#1d8264");
         }
 
+        // sync frames (linked file assets) get a blue outline
+        if (element.customData?.syncFolder) {
+          context.strokeStyle =
+            appState.theme === THEME.LIGHT
+              ? "#4f8ef7"
+              : applyDarkModeFilter("#2f6fdd");
+        }
+
         if (FRAME_STYLE.radius && context.roundRect) {
           context.beginPath();
           context.roundRect(

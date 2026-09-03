@@ -2,6 +2,7 @@ import {
   loginIcon,
   ExcalLogo,
   eyeIcon,
+  ImageIcon,
 } from "@excalidraw/excalidraw/components/icons";
 import { useI18n } from "@excalidraw/excalidraw/i18n";
 import { MainMenu } from "@excalidraw/excalidraw/index";
@@ -22,6 +23,8 @@ export const AppMainMenu: React.FC<{
   isCollabEnabled: boolean;
   theme: Theme | "system";
   refresh: () => void;
+  /** when defined, shows the "create sync frame" item (linked file assets) */
+  onCreateSyncFrame?: () => void;
 }> = React.memo((props) => {
   const { t } = useI18n();
   return (
@@ -40,6 +43,14 @@ export const AppMainMenu: React.FC<{
       <MainMenu.DefaultItems.SearchMenu />
       <MainMenu.DefaultItems.Help />
       <MainMenu.DefaultItems.ClearCanvas />
+      {props.onCreateSyncFrame && (
+        <MainMenu.Item
+          icon={ImageIcon}
+          onSelect={() => props.onCreateSyncFrame!()}
+        >
+          {t("labels.createSyncFrame")}
+        </MainMenu.Item>
+      )}
       <MainMenu.Separator />
       <MainMenu.ItemLink
         icon={ExcalLogo}

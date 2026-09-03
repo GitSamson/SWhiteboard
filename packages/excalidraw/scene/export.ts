@@ -55,6 +55,8 @@ import { serializeAsJSON } from "../data/json";
 
 import { Fonts } from "../fonts";
 
+import { getLinkedAssetsBridge } from "../linkedAssetsBridge";
+
 import { renderStaticScene } from "../renderer/staticScene";
 import { renderSceneToSvg } from "../renderer/staticSvgScene";
 
@@ -334,6 +336,19 @@ export const exportToSvg = async (
     frameRendering,
   });
 
+  // linked file assets: swap linked thumbnails for their on-disk originals
+  // (in-memory copy only; the scene's files map is never mutated). On
+  // failure we keep the embedded thumbnails.
+  let resolvedFiles = files;
+  const linkedAssetsBridge = getLinkedAssetsBridge();
+  if (linkedAssetsBridge && files) {
+    try {
+      resolvedFiles = await linkedAssetsBridge.resolveOriginalsForExport(files);
+    } catch (error) {
+      console.error("failed to resolve linked originals for export", error);
+    }
+  }
+
   if (exportingFrame) {
     exportPadding = 0;
   }
@@ -481,7 +496,7 @@ export const exportToSvg = async (
     toBrandedType<RenderableElementsMap>(arrayToMap(elementsForRender)),
     rsvg,
     svgRoot,
-    files || {},
+    resolvedFiles || {},
     {
       offsetX,
       offsetY,

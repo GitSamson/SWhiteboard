@@ -140,6 +140,12 @@ export type ActionName =
   | "linkToElement"
   | "cropEditor"
   | "downloadOriginalImage"
+  | "convertToLinked"
+  | "convertToEmbedded"
+  | "renameLinkedImage"
+  | "showHiddenImages"
+  | "deleteHiddenImages"
+  | "resetSyncFrameLayout"
   | "wrapSelectionInFrame"
   | "toggleShapeSwitch"
   | "togglePolygon";

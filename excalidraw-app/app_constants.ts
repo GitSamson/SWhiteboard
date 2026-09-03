@@ -47,6 +47,8 @@ export const STORAGE_KEYS = {
 
   IDB_LIBRARY: "excalidraw-library",
   IDB_TTD_CHATS: "excalidraw-ttd-chats",
+  IDB_LINKED_ASSETS_DB: "linked-assets-db",
+  IDB_LINKED_ASSETS_STORE: "linked-assets-store",
 
   // do not use apart from migrations
   __LEGACY_LOCAL_STORAGE_LIBRARY: "excalidraw-library",

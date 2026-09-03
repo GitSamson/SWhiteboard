@@ -186,6 +186,9 @@
     "unCroppedDimension": "未裁剪的尺寸",
     "copyElementLink": "复制此对象的链接",
     "downloadOriginalImage": "下载原图",
+    "createSyncFrame": "创建同步画框",
+    "convertToLinked": "链接到文件夹",
+    "convertToEmbedded": "嵌入到画布文件",
     "linkToElement": "链接到对象",
     "wrapSelectionInFrame": "用选中的元素创建画框",
     "tab": "Tab",
@@ -196,7 +199,11 @@
     "boxSelectionContain": "",
     "boxSelectionOverlap": "",
     "arrowBinding": "箭头绑定",
-    "midpointSnapping": "吸附到中点"
+    "midpointSnapping": "吸附到中点",
+    "renameLinkedImage": "重命名链接图片",
+    "showHiddenImages": "显示隐藏的图片",
+    "deleteHiddenImages": "删除隐藏的图片",
+    "resetSyncFrameLayout": "重置布局"
   },
   "elementLink": {
     "title": "链接到对象",
@@ -753,5 +760,15 @@
     "spacebar": "空格",
     "delete": "Delete",
     "mmb": "鼠标滚轮"
+  },
+  "linkedAssets": {
+    "missingBanner": "有 {{count}} 张链接图片在其文件夹中丢失",
+    "clearMissing": "全部移除",
+    "unsupported": "此画布包含链接文件，当前浏览器无法加载原图，仅显示缩略图。",
+    "renameTitle": "重命名链接图片",
+    "renameConfirm": "重命名",
+    "syncFoldersTitle": "同步文件夹",
+    "syncFoldersEmpty": "当前画布还没有同步文件夹。",
+    "syncFolderFileCount": "{{count}} 个文件"
   }
 }
