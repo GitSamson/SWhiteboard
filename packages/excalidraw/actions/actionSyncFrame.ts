@@ -5,7 +5,12 @@ import type {
   NonDeleted,
 } from "@excalidraw/element/types";
 
-import { eyeIcon, TrashIcon, ZoomResetIcon } from "../components/icons";
+import {
+  eyeIcon,
+  RedoIcon,
+  TrashIcon,
+  ZoomResetIcon,
+} from "../components/icons";
 
 import { getLinkedAssetsBridge } from "../linkedAssetsBridge";
 
@@ -93,6 +98,35 @@ export const actionResetSyncFrameLayout = register({
     if (frame) {
       try {
         getLinkedAssetsBridge()?.resetSyncFrameLayout(frame);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    return {
+      captureUpdate: CaptureUpdateAction.NEVER,
+    };
+  },
+  predicate: (elements, appState, _, app) => {
+    if (!getLinkedAssetsBridge()) {
+      return false;
+    }
+    return !!getSelectedSyncFrame(appState, app);
+  },
+});
+
+export const actionRefreshSyncFrame = register({
+  name: "refreshSyncFrame",
+  label: "labels.refreshSyncFrame",
+  icon: RedoIcon,
+  viewMode: true,
+  trackEvent: { category: "menu" },
+  keywords: ["image", "refresh", "rescan", "folder", "sync", "frame"],
+  perform(elements, appState, _, app) {
+    const frame = getSelectedSyncFrame(appState, app);
+    // fire-and-forget: the app-layer service reports progress/errors via toast
+    if (frame) {
+      try {
+        getLinkedAssetsBridge()?.refreshSyncFrame(frame);
       } catch (error) {
         console.error(error);
       }

@@ -42,11 +42,16 @@ const wheelZoom = () => {
   });
 };
 
+// panning is shift+wheel; a plain wheel zooms
 const wheelPan = () => {
   fireEvent.wheel(GlobalTestState.interactiveCanvas, {
-    deltaX: 30,
+    shiftKey: true,
     deltaY: 40,
   });
+};
+
+const plainWheel = () => {
+  fireEvent.wheel(GlobalTestState.interactiveCanvas, { deltaY: 40 });
 };
 
 // zoom shortcuts' keyTest matches on `event.code` (CODES.EQUAL/MINUS/ZERO)
@@ -108,7 +113,12 @@ describe("baseline (interactive & ui enabled by default)", () => {
     wheelZoom();
     expect(h.state.zoom.value).toBeGreaterThan(initialZoom);
 
-    // plain wheel pans
+    // plain wheel zooms (default wheel behavior)
+    const zoomBeforePlainWheel = h.state.zoom.value;
+    plainWheel();
+    expect(h.state.zoom.value).toBeLessThan(zoomBeforePlainWheel);
+
+    // shift+wheel pans
     const { scrollX, scrollY } = h.state;
     wheelPan();
     expect([h.state.scrollX, h.state.scrollY]).not.toEqual([scrollX, scrollY]);
@@ -1084,18 +1094,23 @@ describe("interaction={{ enabled: { navigation } }}", () => {
     restoreOriginalGetBoundingClientRect();
   });
 
-  it("wheel pans & ctrl+wheel zooms the canvas", () => {
+  it("wheel zooms & shift+wheel pans the canvas", () => {
     expect(h.app.isNavigationEnabled()).toBe(true);
     expect(h.state.viewModeEnabled).toBe(true);
     expect(queryContainer(".excalidraw--navigation")).not.toBe(null);
+
+    const zoom = h.state.zoom.value;
+    plainWheel();
+    expect(h.state.zoom.value).toBeLessThan(zoom);
 
     const { scrollX, scrollY } = h.state;
     wheelPan();
     expect([h.state.scrollX, h.state.scrollY]).not.toEqual([scrollX, scrollY]);
 
-    const zoom = h.state.zoom.value;
+    // ctrl+wheel still zooms
+    const zoomBeforeCtrl = h.state.zoom.value;
     wheelZoom();
-    expect(h.state.zoom.value).toBeGreaterThan(zoom);
+    expect(h.state.zoom.value).toBeGreaterThan(zoomBeforeCtrl);
   });
 
   it("pointer drag pans without selecting", () => {

@@ -21,13 +21,15 @@ import type {
   ExcalidrawImperativeAPI,
 } from "@excalidraw/excalidraw/types";
 
+import { appJotaiStore } from "../app-jotai";
+
 import { convertElementsToLinked } from "./convert";
 import {
   duplicateLinkedFiles,
   findUnregisteredLinkedDuplicates,
 } from "./duplicate";
 import { unlinkFolderLinks } from "./frameActions";
-import { isLinkedAssetsAvailable } from "./state";
+import { isLinkedAssetsAvailable, orphanedSyncFolderAtom } from "./state";
 
 import type { LinkedFileMeta, SyncFolderMeta } from "./types";
 
@@ -118,8 +120,10 @@ export const startSyncEngine = (
       const toConvert: ExcalidrawImageElement[] = [];
       const wasPrimed = primed;
 
-      // sync frame deletions: unlink the folder's images (strip metadata,
-      // files on disk stay untouched). Skipped on the priming pass.
+      // sync frame deletions: ask the user whether the folder's files
+      // should be deleted too, then unlink the images either way (the
+      // dialog performs the unlink). Frames without files are unlinked
+      // directly. Skipped on the priming pass.
       const seenFrameIds = new Set<string>();
       for (const element of elements) {
         if (!isFrameElement(element)) {
@@ -138,7 +142,16 @@ export const startSyncEngine = (
           element.isDeleted
         ) {
           enqueueConversion(excalidrawAPI, async () => {
-            unlinkFolderLinks(excalidrawAPI, syncFolder.folderId);
+            const relPaths = Object.keys(syncFolder.manifest);
+            if (relPaths.length) {
+              appJotaiStore.set(orphanedSyncFolderAtom, {
+                folderId: syncFolder.folderId,
+                rootName: syncFolder.rootName,
+                relPaths,
+              });
+            } else {
+              unlinkFolderLinks(excalidrawAPI, syncFolder.folderId);
+            }
           });
         }
         frameLedger.set(element.id, !element.isDeleted);

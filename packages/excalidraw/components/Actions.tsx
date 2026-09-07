@@ -4,7 +4,7 @@ import { Popover } from "radix-ui";
 
 import { CLASSES } from "@excalidraw/common";
 
-import { isArrowElement } from "@excalidraw/element";
+import { isArrowElement, isImageElement } from "@excalidraw/element";
 
 import type {
   ExcalidrawElement,
@@ -152,6 +152,27 @@ export const SelectedShapeActions = ({
     app,
   );
 
+  // a single selected linked image shows its bound folder's name
+  // (folder names live on the sync frame's customData.syncFolder)
+  let linkedImageFolderName: string | null = null;
+  if (targetElements.length === 1) {
+    const element = targetElements[0];
+    const linkedFile = element.customData?.linkedFile as
+      | { folderId: string }
+      | undefined;
+    if (isImageElement(element) && linkedFile) {
+      for (const candidate of elementsMap.values()) {
+        const syncFolder = candidate.customData?.syncFolder as
+          | { folderId: string; rootName: string }
+          | undefined;
+        if (syncFolder?.folderId === linkedFile.folderId) {
+          linkedImageFolderName = syncFolder.rootName;
+          break;
+        }
+      }
+    }
+  }
+
   // the bucket fill tool configures only the fill it creates: color, fill
   // style, and opacity (shared `currentItem*` values; no stroke properties)
   if (appState.activeTool.type === "bucketfill") {
@@ -196,6 +217,15 @@ export const SelectedShapeActions = ({
       {predicates.arrowheads && <>{renderAction("changeArrowhead")}</>}
 
       {predicates.opacity && renderAction("changeOpacity")}
+
+      {linkedImageFolderName && (
+        <fieldset>
+          <legend>{t("labels.linkedImageFolder")}</legend>
+          <div className="linked-image-folder-name">
+            {linkedImageFolderName}
+          </div>
+        </fieldset>
+      )}
 
       {predicates.layers && <LayersFieldset renderAction={renderAction} />}
 

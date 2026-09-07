@@ -203,7 +203,9 @@
     "renameLinkedImage": "重命名链接图片",
     "showHiddenImages": "显示隐藏的图片",
     "deleteHiddenImages": "删除隐藏的图片",
-    "resetSyncFrameLayout": "重置布局"
+    "resetSyncFrameLayout": "重置布局",
+    "refreshSyncFrame": "刷新检查",
+    "linkedImageFolder": "链接文件夹"
   },
   "elementLink": {
     "title": "链接到对象",
@@ -769,6 +771,14 @@
     "renameConfirm": "重命名",
     "syncFoldersTitle": "同步文件夹",
     "syncFoldersEmpty": "当前画布还没有同步文件夹。",
-    "syncFolderFileCount": "{{count}} 个文件"
+    "syncFolderFileCount": "{{count}} 个文件",
+    "deleteHiddenTitle": "删除隐藏的图片",
+    "deleteHiddenMessage": "以下 {{count}} 个文件将从链接文件夹中删除，此操作不可撤销。",
+    "orphanedTitle": "同步画框已删除",
+    "orphanedMessage": "是否同时从画板上删除 \"{{folder}}\" 关联的 {{count}} 张图片？磁盘上的文件不会被删除。",
+    "orphanedKeep": "保留图片",
+    "orphanedDelete": "删除图片",
+    "syncFolderExpand": "展开文件列表",
+    "syncFolderCollapse": "收起文件列表"
   }
 }

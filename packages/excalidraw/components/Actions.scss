@@ -206,3 +206,10 @@
   --button-hover-bg: #363541;
   --button-bg: var(--color-surface-high);
 }
+
+.linked-image-folder-name {
+  font-size: 0.8125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

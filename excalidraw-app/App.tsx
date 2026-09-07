@@ -108,6 +108,8 @@ import {
 } from "./linkedAssets";
 import { MissingLinkedBanner } from "./linkedAssets/ui/MissingLinkedBanner";
 import { RenameLinkedImageDialog } from "./linkedAssets/ui/RenameLinkedImageDialog";
+import { DeleteHiddenImagesDialog } from "./linkedAssets/ui/DeleteHiddenImagesDialog";
+import { OrphanedFolderDialog } from "./linkedAssets/ui/OrphanedFolderDialog";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
 import {
   ExportToExcalidrawPlus,
@@ -153,7 +155,6 @@ import { ExcalidrawPlusIframeExport } from "./ExcalidrawPlusIframeExport";
 
 import "./index.scss";
 
-import { ExcalidrawPlusPromoBanner } from "./components/ExcalidrawPlusPromoBanner";
 import { AppSidebar } from "./components/AppSidebar";
 
 import type { CollabAPI } from "./collab/Collab";
@@ -1037,26 +1038,56 @@ const ExcalidrawWrapper = () => {
         theme={editorTheme}
         onThemeChange={setAppTheme}
         renderTopRightUI={(isMobile) => {
-          if (isMobile || !collabAPI || isCollabDisabled) {
+          const showSyncFrameButton =
+            !isMobile &&
+            editorInterface.formFactor === "desktop" &&
+            isLinkedAssetsAvailable() &&
+            !!excalidrawAPI;
+          const showCollabUI = !isMobile && collabAPI && !isCollabDisabled;
+
+          if (!showSyncFrameButton && !showCollabUI) {
             return null;
           }
 
           return (
             <div className="excalidraw-ui-top-right">
-              {excalidrawAPI?.getEditorInterface().formFactor === "desktop" && (
-                <ExcalidrawPlusPromoBanner
-                  isSignedIn={isExcalidrawPlusSignedUser}
-                />
+              {showSyncFrameButton && (
+                <button
+                  type="button"
+                  className="sync-frame-create-button"
+                  title={t("labels.createSyncFrame")}
+                  onClick={() => void createSyncFrame(excalidrawAPI!)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.375rem",
+                    padding: "0.5rem 0.75rem",
+                    borderRadius: "0.5rem",
+                    border: "1px solid var(--default-border-color)",
+                    background: "var(--island-bg-color, #fff)",
+                    color: "inherit",
+                    fontSize: "0.8125rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("labels.createSyncFrame")}
+                </button>
               )}
 
-              {collabError.message && <CollabError collabError={collabError} />}
-              <LiveCollaborationTrigger
-                isCollaborating={isCollaborating}
-                onSelect={() =>
-                  setShareDialogState({ isOpen: true, type: "share" })
-                }
-                editorInterface={editorInterface}
-              />
+              {showCollabUI && (
+                <>
+                  {collabError.message && (
+                    <CollabError collabError={collabError} />
+                  )}
+                  <LiveCollaborationTrigger
+                    isCollaborating={isCollaborating}
+                    onSelect={() =>
+                      setShareDialogState({ isOpen: true, type: "share" })
+                    }
+                    editorInterface={editorInterface}
+                  />
+                </>
+              )}
             </div>
           );
         }}
@@ -1089,6 +1120,8 @@ const ExcalidrawWrapper = () => {
         />
         <MissingLinkedBanner />
         <RenameLinkedImageDialog />
+        <DeleteHiddenImagesDialog />
+        <OrphanedFolderDialog />
         <AppWelcomeScreen
           onCollabDialogOpen={onCollabDialogOpen}
           isCollabEnabled={!isCollabDisabled}

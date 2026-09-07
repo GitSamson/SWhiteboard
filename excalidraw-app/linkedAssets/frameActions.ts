@@ -6,9 +6,11 @@
  * - deleteHiddenImages: deletes the files of hidden images from the bound
  *   folder for real (user-initiated, may prompt for permission)
  * - resetSyncFrameLayout: unhides everything and re-lays out the frame's
- *   linked images in a grid
+ *   linked images in a grid, restoring their cell-fitted sizes
  * - unlinkFolderLinks: strips link metadata from a folder's images without
  *   touching the disk (used when a sync frame itself is deleted)
+ * - deleteFolderImages: deletes a folder's images from the board (never
+ *   from disk) — user-confirmed cleanup after the sync frame was deleted
  */
 
 import {
@@ -25,9 +27,15 @@ import type {
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 import { deleteLinkedFile } from "./deletion";
-import { computeImportCellSize, GRID_PADDING } from "./importer";
+import {
+  computeImportCellSize,
+  fitImageToCell,
+  gridColumns,
+  gridPositionFor,
+  growFrameToFit,
+} from "./importer";
 
-import type { LinkedFileMeta } from "./types";
+import type { LinkedFileMeta, SyncFolderMeta } from "./types";
 
 const getFrameChildren = (
   excalidrawAPI: ExcalidrawImperativeAPI,
@@ -98,55 +106,95 @@ export const deleteHiddenImages = async (
 };
 
 /**
- * Unhides all linked images in the frame and re-lays them out in a grid,
- * keeping their current sizes and a stable top-to-bottom, left-to-right
- * order.
+ * Unhides every image linked to the frame's folder — including images that
+ * were dragged out of the frame — and re-lays them out in the same grid the
+ * importer produces (manifest order, same cell math), restoring each image
+ * to its cell-fitted size. Grows the frame downward when the grid
+ * overflows it.
  */
 export const resetSyncFrameLayout = (
   excalidrawAPI: ExcalidrawImperativeAPI,
   frameId: string,
 ): void => {
-  const frame = excalidrawAPI
-    .getSceneElementsIncludingDeleted()
-    .find((el) => el.id === frameId) as ExcalidrawFrameElement | undefined;
-  if (!frame) {
-    return;
-  }
-  const children = getFrameChildren(excalidrawAPI, frameId);
-  if (!children.length) {
+  const sceneElements = excalidrawAPI.getSceneElementsIncludingDeleted();
+  const frame = sceneElements.find((el) => el.id === frameId) as
+    | ExcalidrawFrameElement
+    | undefined;
+  const syncFolder = frame?.customData?.syncFolder as
+    | SyncFolderMeta
+    | undefined;
+  if (!frame || !syncFolder) {
     return;
   }
 
-  const sorted = [...children].sort((a, b) => a.y - b.y || a.x - b.x);
-  const { cellWidth, cellHeight } = computeImportCellSize(frame, sorted);
-  const columns = Math.max(
-    1,
-    Math.floor((frame.width - 2 * GRID_PADDING) / cellWidth),
+  // every image linked to this folder, wherever it sits on the canvas
+  const linked = sceneElements.filter(
+    (el) =>
+      isImageElement(el) &&
+      (el.customData?.linkedFile as LinkedFileMeta | undefined)?.folderId ===
+        syncFolder.folderId,
+  ) as ExcalidrawImageElement[];
+  if (!linked.length) {
+    return;
+  }
+
+  // manifest order first; files unknown to the manifest last, by name
+  const manifestOrder = new Map(
+    Object.keys(syncFolder.manifest).map((relPath, index) => [relPath, index]),
+  );
+  const metaOf = (el: ExcalidrawImageElement) =>
+    el.customData!.linkedFile as LinkedFileMeta;
+  const sorted = [...linked].sort((a, b) => {
+    const orderA =
+      manifestOrder.get(metaOf(a).relPath) ?? Number.MAX_SAFE_INTEGER;
+    const orderB =
+      manifestOrder.get(metaOf(b).relPath) ?? Number.MAX_SAFE_INTEGER;
+    return (
+      orderA - orderB ||
+      metaOf(a).displayName.localeCompare(metaOf(b).displayName)
+    );
+  });
+
+  // deterministic sizing: same frame → same layout as a fresh import
+  const cellSize = computeImportCellSize(frame, []);
+  const columns = gridColumns(frame, cellSize);
+
+  const layouts = new Map(
+    sorted.map((el, index) => {
+      const size = fitImageToCell(cellSize, el.width, el.height);
+      return [
+        el.id,
+        {
+          ...size,
+          ...gridPositionFor(
+            frame,
+            cellSize,
+            columns,
+            index,
+            size.width,
+            size.height,
+          ),
+        },
+      ];
+    }),
   );
 
-  const positions = new Map(
-    sorted.map((el, index) => [
-      el.id,
-      {
-        x:
-          frame.x +
-          GRID_PADDING +
-          (index % columns) * cellWidth +
-          (cellWidth - el.width) / 2,
-        y:
-          frame.y +
-          GRID_PADDING +
-          Math.floor(index / columns) * cellHeight +
-          (cellHeight - el.height) / 2,
-      },
-    ]),
+  const contentBottom = Math.max(
+    ...sorted.map((el) => {
+      const layout = layouts.get(el.id)!;
+      return layout.y + layout.height;
+    }),
   );
+  const frameHeight = growFrameToFit(frame, contentBottom);
 
   excalidrawAPI.updateScene({
     elements: excalidrawAPI.getSceneElementsIncludingDeleted().map((el) => {
-      const position = positions.get(el.id);
-      return position
-        ? newElementWith(el, { ...position, isDeleted: false })
+      if (el.id === frameId) {
+        return newElementWith(el, { height: frameHeight });
+      }
+      const layout = layouts.get(el.id);
+      return layout
+        ? newElementWith(el, { ...layout, isDeleted: false, frameId })
         : el;
     }),
     captureUpdate: CaptureUpdateAction.IMMEDIATELY,
@@ -183,5 +231,39 @@ export const unlinkFolderLinks = (
       return newElementWith(el, { customData });
     }),
     captureUpdate: CaptureUpdateAction.NEVER,
+  });
+};
+
+/**
+ * Deletes every image bound to `folderId` from the board (native isDeleted,
+ * undoable) — user-confirmed cleanup after its sync frame was deleted.
+ * The files on disk are never touched.
+ */
+export const deleteFolderImages = (
+  excalidrawAPI: ExcalidrawImperativeAPI,
+  folderId: string,
+): void => {
+  const doomed = new Set(
+    excalidrawAPI
+      .getSceneElementsIncludingDeleted()
+      .filter(
+        (el) =>
+          isImageElement(el) &&
+          !el.isDeleted &&
+          (el.customData?.linkedFile as LinkedFileMeta | undefined)
+            ?.folderId === folderId,
+      )
+      .map((el) => el.id),
+  );
+  if (!doomed.size) {
+    return;
+  }
+  excalidrawAPI.updateScene({
+    elements: excalidrawAPI
+      .getSceneElementsIncludingDeleted()
+      .map((el) =>
+        doomed.has(el.id) ? newElementWith(el, { isDeleted: true }) : el,
+      ),
+    captureUpdate: CaptureUpdateAction.IMMEDIATELY,
   });
 };

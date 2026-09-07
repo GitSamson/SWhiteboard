@@ -39,3 +39,16 @@ export const missingLinkedCountAtom = atom(0);
 
 /** id of the linked image element being renamed, null when dialog closed */
 export const renameImageTargetAtom = atom<string | null>(null);
+
+/** id of the sync frame whose hidden images are pending deletion confirm */
+export const deleteHiddenImagesTargetAtom = atom<string | null>(null);
+
+export interface OrphanedSyncFolder {
+  folderId: string;
+  rootName: string;
+  /** files associated with the deleted sync frame */
+  relPaths: string[];
+}
+
+/** set when a sync frame with linked files was deleted; null when dismissed */
+export const orphanedSyncFolderAtom = atom<OrphanedSyncFolder | null>(null);

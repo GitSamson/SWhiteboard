@@ -1,7 +1,8 @@
 /**
  * Sidebar tab for the "linked file assets" feature: lists the sync frames on
  * the current scene (each is bound to a folder). Clicking an entry scrolls
- * the viewport to the frame and selects it.
+ * the viewport to the frame and selects it; the expand triangle reveals the
+ * folder's synced files.
  */
 
 import { useEffect, useState } from "react";
@@ -21,7 +22,7 @@ import type { SyncFolderMeta } from "../types";
 interface SyncFrameInfo {
   id: string;
   title: string;
-  fileCount: number;
+  fileNames: string[];
   x: number;
   y: number;
   width: number;
@@ -41,7 +42,7 @@ const collectSyncFrames = (
       return {
         id: el.id,
         title: el.name || syncFolder.rootName,
-        fileCount: Object.keys(syncFolder.manifest).length,
+        fileNames: Object.keys(syncFolder.manifest),
         x: el.x,
         y: el.y,
         width: el.width,
@@ -53,6 +54,9 @@ export const SyncFoldersPanel = () => {
   const { t } = useI18n();
   const excalidrawAPI = useExcalidrawAPI();
   const [frames, setFrames] = useState<SyncFrameInfo[]>([]);
+  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
 
   useEffect(() => {
     if (!excalidrawAPI) {
@@ -80,6 +84,18 @@ export const SyncFoldersPanel = () => {
     });
   };
 
+  const toggleExpanded = (frameId: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(frameId)) {
+        next.delete(frameId);
+      } else {
+        next.add(frameId);
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="px-3">
       <h3 style={{ fontSize: "0.875rem", margin: "0.75rem 0 0.5rem" }}>
@@ -100,44 +116,106 @@ export const SyncFoldersPanel = () => {
             gap: "0.25rem",
           }}
         >
-          {frames.map((frame) => (
-            <li key={frame.id}>
-              <button
-                type="button"
-                onClick={() => scrollToFrame(frame)}
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.375rem 0.5rem",
-                  border: "1px solid var(--default-border-color)",
-                  borderRadius: "0.375rem",
-                  background: "transparent",
-                  color: "inherit",
-                  fontSize: "0.8125rem",
-                  cursor: "pointer",
-                  textAlign: "left",
-                }}
-              >
-                <span
+          {frames.map((frame) => {
+            const expanded = expandedIds.has(frame.id);
+            return (
+              <li key={frame.id}>
+                <div
                   style={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.25rem",
                   }}
                 >
-                  {frame.title}
-                </span>
-                <span style={{ opacity: 0.6, flexShrink: 0 }}>
-                  {t("linkedAssets.syncFolderFileCount", {
-                    count: frame.fileCount,
-                  })}
-                </span>
-              </button>
-            </li>
-          ))}
+                  <button
+                    type="button"
+                    aria-label={
+                      expanded
+                        ? t("linkedAssets.syncFolderCollapse")
+                        : t("linkedAssets.syncFolderExpand")
+                    }
+                    onClick={() => toggleExpanded(frame.id)}
+                    style={{
+                      flexShrink: 0,
+                      width: "1.25rem",
+                      border: "none",
+                      background: "transparent",
+                      color: "inherit",
+                      cursor: "pointer",
+                      padding: 0,
+                      fontSize: "0.75rem",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {expanded ? "▾" : "▸"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollToFrame(frame)}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.375rem 0.5rem",
+                      border: "1px solid var(--default-border-color)",
+                      borderRadius: "0.375rem",
+                      background: "transparent",
+                      color: "inherit",
+                      fontSize: "0.8125rem",
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    <span
+                      style={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {frame.title}
+                    </span>
+                    <span style={{ opacity: 0.6, flexShrink: 0 }}>
+                      {t("linkedAssets.syncFolderFileCount", {
+                        count: frame.fileNames.length,
+                      })}
+                    </span>
+                  </button>
+                </div>
+                {expanded && (
+                  <ul
+                    style={{
+                      listStyle: "none",
+                      padding: 0,
+                      margin: "0.25rem 0 0 1.5rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.125rem",
+                    }}
+                  >
+                    {frame.fileNames.map((fileName) => (
+                      <li
+                        key={fileName}
+                        title={fileName}
+                        style={{
+                          fontSize: "0.75rem",
+                          opacity: 0.75,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {fileName}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

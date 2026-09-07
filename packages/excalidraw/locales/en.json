@@ -203,7 +203,9 @@
     "renameLinkedImage": "Rename linked image",
     "showHiddenImages": "Show hidden images",
     "deleteHiddenImages": "Delete hidden images",
-    "resetSyncFrameLayout": "Reset layout"
+    "resetSyncFrameLayout": "Reset layout",
+    "refreshSyncFrame": "Refresh from folder",
+    "linkedImageFolder": "Linked folder"
   },
   "elementLink": {
     "title": "Link to object",
@@ -769,6 +771,14 @@
     "renameConfirm": "Rename",
     "syncFoldersTitle": "Synced folders",
     "syncFoldersEmpty": "No synced folders on this canvas yet.",
-    "syncFolderFileCount": "{{count}} files"
+    "syncFolderFileCount": "{{count}} files",
+    "deleteHiddenTitle": "Delete hidden images",
+    "deleteHiddenMessage": "The following {{count}} files will be deleted from the linked folder. This cannot be undone.",
+    "orphanedTitle": "Sync frame deleted",
+    "orphanedMessage": "Also remove the {{count}} linked images from the board? The files in \"{{folder}}\" stay on disk.",
+    "orphanedKeep": "Keep images",
+    "orphanedDelete": "Delete images",
+    "syncFolderExpand": "Show files",
+    "syncFolderCollapse": "Hide files"
   }
 }

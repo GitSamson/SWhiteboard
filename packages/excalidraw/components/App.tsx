@@ -332,6 +332,7 @@ import {
   actionShowHiddenImages,
   actionDeleteHiddenImages,
   actionResetSyncFrameLayout,
+  actionRefreshSyncFrame,
 } from "../actions";
 import { actionWrapTextInContainer } from "../actions/actionBoundText";
 import { actionPaste } from "../actions/actionClipboard";
@@ -13739,6 +13740,7 @@ class App extends React.Component<AppProps, AppState> {
       actionShowHiddenImages,
       actionDeleteHiddenImages,
       actionResetSyncFrameLayout,
+      actionRefreshSyncFrame,
       CONTEXT_MENU_SEPARATOR,
       ...options,
       CONTEXT_MENU_SEPARATOR,
@@ -13802,8 +13804,18 @@ class App extends React.Component<AppProps, AppState> {
       }
 
       const { deltaX, deltaY } = event;
-      // note that event.ctrlKey is necessary to handle pinch zooming
-      if (event.metaKey || event.ctrlKey) {
+      // scroll horizontally when shift pressed
+      if (event.shiftKey) {
+        this.viewport.translate(({ zoom, scrollX }) => ({
+          // on Mac, shift+wheel tends to result in deltaX
+          scrollX: scrollX - (deltaY || deltaX) / zoom.value,
+        }));
+        return;
+      }
+
+      // the wheel zooms by default; ctrl/meta still zooms (and is necessary
+      // to handle trackpad pinch zooming)
+      {
         const sign = Math.sign(deltaY);
         const MAX_STEP = ZOOM_STEP * 100;
         const absDelta = Math.abs(deltaY);
@@ -13845,22 +13857,7 @@ class App extends React.Component<AppProps, AppState> {
         if (didTranslate) {
           this.resetShouldCacheIgnoreZoomDebounced();
         }
-        return;
       }
-
-      // scroll horizontally when shift pressed
-      if (event.shiftKey) {
-        this.viewport.translate(({ zoom, scrollX }) => ({
-          // on Mac, shift+wheel tends to result in deltaX
-          scrollX: scrollX - (deltaY || deltaX) / zoom.value,
-        }));
-        return;
-      }
-
-      this.viewport.translate(({ zoom, scrollX, scrollY }) => ({
-        scrollX: scrollX - deltaX / zoom.value,
-        scrollY: scrollY - deltaY / zoom.value,
-      }));
     },
   );
 

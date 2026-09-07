@@ -24,11 +24,7 @@ import {
   registerFolder,
 } from "./folderRegistry";
 import { convertElementsToEmbedded, convertElementsToLinked } from "./convert";
-import {
-  deleteHiddenImages,
-  resetSyncFrameLayout,
-  showHiddenImages,
-} from "./frameActions";
+import { resetSyncFrameLayout, showHiddenImages } from "./frameActions";
 import {
   clearLinkedOriginalCache,
   createLinkedImageResolver,
@@ -36,12 +32,13 @@ import {
 } from "./originals";
 import {
   connectedFoldersAtom,
+  deleteHiddenImagesTargetAtom,
   isLinkedAssetsAvailable,
   missingLinkedCountAtom,
   renameImageTargetAtom,
 } from "./state";
 import { enqueueConvertToLinked, startSyncEngine } from "./syncEngine";
-import { verifyLinkedAssets } from "./verifier";
+import { verifyLinkedAssets, verifySyncFrame } from "./verifier";
 
 import type { ConnectedFolderInfo } from "./state";
 
@@ -115,6 +112,10 @@ export const createSyncFrame = async (
   excalidrawAPI.updateScene({
     elements: [...excalidrawAPI.getSceneElementsIncludingDeleted(), frame],
   });
+
+  // import the folder's current images right away instead of waiting for
+  // the next load/focus-triggered verification
+  void verifyLinkedAssets(excalidrawAPI);
 };
 
 /**
@@ -154,9 +155,13 @@ export const initLinkedAssets = (
       convertElementsToEmbedded(excalidrawAPI, elements),
     // sync frame context menu operations
     showHiddenImages: (frame) => showHiddenImages(excalidrawAPI, frame.id),
-    deleteHiddenImages: (frame) => deleteHiddenImages(excalidrawAPI, frame.id),
+    deleteHiddenImages: (frame) => {
+      // opens the confirmation dialog; the dialog performs the deletion
+      appJotaiStore.set(deleteHiddenImagesTargetAtom, frame.id);
+    },
     resetSyncFrameLayout: (frame) =>
       resetSyncFrameLayout(excalidrawAPI, frame.id),
+    refreshSyncFrame: (frame) => void verifySyncFrame(excalidrawAPI, frame.id),
   });
 
   // the element package's image cache asks this resolver before decoding a

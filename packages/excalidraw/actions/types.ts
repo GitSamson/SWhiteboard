@@ -146,6 +146,7 @@ export type ActionName =
   | "showHiddenImages"
   | "deleteHiddenImages"
   | "resetSyncFrameLayout"
+  | "refreshSyncFrame"
   | "wrapSelectionInFrame"
   | "toggleShapeSwitch"
   | "togglePolygon";

@@ -562,6 +562,39 @@ describe("computeImportCellSize", () => {
   });
 });
 
+describe("grid layout helpers", () => {
+  it("gridColumns always fits at least one column", async () => {
+    const { gridColumns } = await import("../linkedAssets/importer");
+
+    expect(
+      gridColumns({ width: 100 }, { cellWidth: 300, cellHeight: 300 }),
+    ).toBe(1);
+    expect(
+      gridColumns({ width: 1000 }, { cellWidth: 100, cellHeight: 100 }),
+    ).toBeGreaterThan(1);
+  });
+
+  it("gridPositionFor wraps to the next row after `columns` cells", async () => {
+    const { gridPositionFor } = await import("../linkedAssets/importer");
+
+    const frame = { x: 0, y: 0 };
+    const cellSize = { cellWidth: 150, cellHeight: 150 };
+    const first = gridPositionFor(frame, cellSize, 2, 0, 100, 100);
+    const second = gridPositionFor(frame, cellSize, 2, 1, 100, 100);
+    const third = gridPositionFor(frame, cellSize, 2, 2, 100, 100);
+    expect(second.x).toBeGreaterThan(first.x);
+    expect(third.x).toBe(first.x);
+    expect(third.y).toBeGreaterThan(first.y);
+  });
+
+  it("growFrameToFit grows downward and never shrinks", async () => {
+    const { growFrameToFit } = await import("../linkedAssets/importer");
+
+    expect(growFrameToFit({ y: 0, height: 600 }, 1000)).toBeGreaterThan(600);
+    expect(growFrameToFit({ y: 0, height: 600 }, 100)).toBe(600);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // deletion
 // ---------------------------------------------------------------------------
@@ -765,12 +798,142 @@ describe("frameActions", { timeout: 20000 }, () => {
     const elements = api.getSceneElementsIncludingDeleted();
     const img1 = elements.find((el) => el.id === "img-1")!;
     const img2 = elements.find((el) => el.id === "img-2")!;
-    // hidden image is back and both sit inside the frame in visual order
-    // (img-2 was higher → first cell, img-1 → second cell)
+    // hidden image is back and both sit inside the frame in manifest order
+    // (a.png → first cell, b.png → second cell)
     expect(img1.isDeleted).toBe(false);
-    expect(img2.x).toBeLessThan(img1.x);
-    expect(img2.y).toBeGreaterThanOrEqual(frame.y);
-    expect(img1.x).toBeLessThan(frame.x + frame.width);
+    expect(img1.x).toBeLessThan(img2.x);
+    expect(img1.y).toBeGreaterThanOrEqual(frame.y);
+    expect(img2.x).toBeLessThan(frame.x + frame.width);
+  });
+
+  it("resetSyncFrameLayout pulls back images dragged out of the frame", async () => {
+    const { resetSyncFrameLayout } = await import(
+      "../linkedAssets/frameActions"
+    );
+
+    const frame = makeFrameWithSize({
+      "a.png": { size: 3, elementIds: ["img-1"] },
+    });
+    const outside = {
+      ...makeImageElement("img-1"),
+      frameId: null,
+      x: 5000,
+      y: 5000,
+      width: 100,
+      height: 100,
+    };
+    const api = makeExcalidrawAPI([frame, outside]);
+
+    resetSyncFrameLayout(api, "frame-1");
+
+    const img = api
+      .getSceneElementsIncludingDeleted()
+      .find((el) => el.id === "img-1")!;
+    expect(img.frameId).toBe("frame-1");
+    expect(img.x).toBeGreaterThanOrEqual(frame.x);
+    expect(img.x).toBeLessThan(frame.x + frame.width);
+    expect(img.y).toBeGreaterThanOrEqual(frame.y);
+  });
+
+  it("resetSyncFrameLayout grows the frame when the grid overflows it", async () => {
+    const { resetSyncFrameLayout } = await import(
+      "../linkedAssets/frameActions"
+    );
+
+    const manifest: SyncFolderMeta["manifest"] = {};
+    const images = [];
+    for (let i = 1; i <= 6; i++) {
+      manifest[`img${i}.png`] = { size: 3, elementIds: [`img-${i}`] };
+      images.push({
+        ...makeImageElement(`img-${i}`, {
+          relPath: `img${i}.png`,
+          displayName: `img${i}.png`,
+        }),
+        width: 100,
+        height: 100,
+      });
+    }
+    // frame too small for 6 images of 100x100
+    const frame = { ...makeFrameWithSize(manifest), width: 300, height: 200 };
+    const api = makeExcalidrawAPI([frame, ...images]);
+
+    resetSyncFrameLayout(api, "frame-1");
+
+    const updatedFrame = api
+      .getSceneElementsIncludingDeleted()
+      .find((el) => el.id === "frame-1")!;
+    expect(updatedFrame.height).toBeGreaterThan(200);
+    // every image fits inside the grown frame
+    for (const el of api.getSceneElementsIncludingDeleted()) {
+      if (el.type !== "image") {
+        continue;
+      }
+      expect(el.y + el.height).toBeLessThanOrEqual(
+        updatedFrame.y + updatedFrame.height,
+      );
+    }
+  });
+
+  it("resetSyncFrameLayout restores cell-fitted image sizes", async () => {
+    const { resetSyncFrameLayout } = await import(
+      "../linkedAssets/frameActions"
+    );
+
+    const frame = makeFrameWithSize({
+      "a.png": { size: 3, elementIds: ["img-1"] },
+    });
+    // user enlarged the image: 400x200 (cell is 150, inner 130 for 800x600)
+    const enlarged = {
+      ...makeImageElement("img-1"),
+      width: 400,
+      height: 200,
+    };
+    const api = makeExcalidrawAPI([frame, enlarged]);
+
+    resetSyncFrameLayout(api, "frame-1");
+
+    const img = api
+      .getSceneElementsIncludingDeleted()
+      .find((el) => el.id === "img-1")!;
+    expect(img.width).toBe(130);
+    expect(img.height).toBe(65);
+  });
+
+  it("deleteFolderImages removes the folder's images from the board only", async () => {
+    const { deleteFolderImages } = await import("../linkedAssets/frameActions");
+
+    const files: Record<string, FakeFile> = {
+      "a.png": new FakeFile("a.png", "abc"),
+      "b.png": new FakeFile("b.png", "def"),
+    };
+    folderEntries.set("folder-1", {
+      handle: makeFakeDir(files),
+      rootName: "root",
+      lastUsedAt: 1,
+    });
+
+    const frame = makeFrameWithSize({
+      "a.png": { size: 3, elementIds: ["img-1"] },
+      "b.png": { size: 3, elementIds: ["img-2"] },
+    });
+    const img1 = makeImageElement("img-1");
+    const img2 = makeImageElement("img-2", {
+      relPath: "b.png",
+      displayName: "b.png",
+    });
+    // image of another folder is untouched
+    const other = makeImageElement("img-3", { folderId: "folder-2" });
+    const api = makeExcalidrawAPI([frame, img1, img2, other]);
+
+    deleteFolderImages(api, "folder-1");
+
+    const elements = api.getSceneElementsIncludingDeleted();
+    expect(elements.find((el) => el.id === "img-1")!.isDeleted).toBe(true);
+    expect(elements.find((el) => el.id === "img-2")!.isDeleted).toBe(true);
+    expect(elements.find((el) => el.id === "img-3")!.isDeleted).toBe(false);
+    // files on disk are never touched
+    expect(files["a.png"]).toBeDefined();
+    expect(files["b.png"]).toBeDefined();
   });
 
   it("unlinkFolderLinks strips link metadata without touching files", async () => {

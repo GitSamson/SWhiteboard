@@ -102,4 +102,5 @@ export {
   actionShowHiddenImages,
   actionDeleteHiddenImages,
   actionResetSyncFrameLayout,
+  actionRefreshSyncFrame,
 } from "./actionSyncFrame";

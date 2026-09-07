@@ -1029,6 +1029,108 @@ const renderSelectionBorder = (
   context.restore();
 };
 
+const LINKED_BADGE_COLOR = "#4f8ef7";
+
+// 24x24 link-icon strokes (same path data as the LinkIcon component)
+const LINKED_BADGE_PATHS = [
+  "M8.333 11.667a2.917 2.917 0 0 0 4.167 0l3.333-3.334a2.946 2.946 0 1 0-4.166-4.166l-.417.416",
+  "M11.667 8.333a2.917 2.917 0 0 0-4.167 0l-3.333 3.334a2.946 2.946 0 0 0 4.166 4.166l.417-.416",
+];
+
+// small link badge rendered inside the top-right corner of a selected
+// linked image to indicate it is backed by a file on disk: a white-filled
+// circle with the link icon centered in it
+const renderLinkedImageBadge = (
+  context: CanvasRenderingContext2D,
+  appState: InteractiveCanvasAppState,
+  element: NonDeleted<ExcalidrawImageElement>,
+  elementsMap: RenderableElementsMap,
+) => {
+  // intentionally uses the axis-aligned bounds; the badge hugs the corner
+  // even for rotated images
+  const [, y1, x2] = getElementAbsoluteCoords(element, elementsMap, true);
+  const radius = 9 / appState.zoom.value;
+  const inset = 5 / appState.zoom.value;
+  const cx = x2 - radius - inset;
+  const cy = y1 + radius + inset;
+
+  context.save();
+  context.translate(appState.scrollX, appState.scrollY);
+
+  context.beginPath();
+  context.arc(cx, cy, radius, 0, Math.PI * 2);
+  context.fillStyle = "#ffffff";
+  context.fill();
+  context.strokeStyle = LINKED_BADGE_COLOR;
+  context.lineWidth = 1.5 / appState.zoom.value;
+  context.stroke();
+
+  context.translate(cx, cy);
+  context.scale((radius * 1.5) / 24, (radius * 1.5) / 24);
+  context.translate(-12, -12);
+  context.strokeStyle = LINKED_BADGE_COLOR;
+  context.lineWidth = 2.5;
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  for (const path of LINKED_BADGE_PATHS) {
+    context.stroke(new Path2D(path));
+  }
+
+  context.restore();
+};
+
+// light blue dashed outline around linked images that belong to the
+// selected sync frame's folder but currently sit outside the frame
+const renderLinkedOutOfFrameHighlights = (
+  context: CanvasRenderingContext2D,
+  appState: InteractiveCanvasAppState,
+  frame: NonDeletedExcalidrawElement,
+  elementsMap: RenderableElementsMap,
+) => {
+  const syncFolder = frame.customData?.syncFolder as
+    | { folderId: string }
+    | undefined;
+  if (!syncFolder) {
+    return;
+  }
+  const padding = 4 / appState.zoom.value;
+
+  context.save();
+  context.translate(appState.scrollX, appState.scrollY);
+  context.strokeStyle = "#74a9f7";
+  context.lineWidth = 1.5 / appState.zoom.value;
+  context.setLineDash([6 / appState.zoom.value, 4 / appState.zoom.value]);
+
+  for (const element of elementsMap.values()) {
+    if (
+      element.id === frame.id ||
+      !isImageElement(element) ||
+      element.frameId === frame.id
+    ) {
+      continue;
+    }
+    const linkedFile = element.customData?.linkedFile as
+      | { folderId: string }
+      | undefined;
+    if (linkedFile?.folderId !== syncFolder.folderId) {
+      continue;
+    }
+    const [x1, y1, x2, y2] = getElementAbsoluteCoords(
+      element,
+      elementsMap,
+      true,
+    );
+    context.strokeRect(
+      x1 - padding,
+      y1 - padding,
+      x2 - x1 + padding * 2,
+      y2 - y1 + padding * 2,
+    );
+  }
+
+  context.restore();
+};
+
 const renderFrameHighlight = (
   context: CanvasRenderingContext2D,
   appState: InteractiveCanvasAppState,
@@ -1926,6 +2028,30 @@ const _renderInteractiveScene = ({
       selections.forEach((selection) =>
         renderSelectionBorder(context, appState, selection),
       );
+
+      // link badge for selected linked images
+      for (const element of selectedElements) {
+        if (
+          isImageElement(element) &&
+          !element.isDeleted &&
+          element.customData?.linkedFile
+        ) {
+          renderLinkedImageBadge(context, appState, element, elementsMap);
+        }
+      }
+
+      // a selected sync frame outlines its linked images dragged outside
+      if (
+        selectedElements.length === 1 &&
+        isFrameLikeElement(selectedElements[0])
+      ) {
+        renderLinkedOutOfFrameHighlights(
+          context,
+          appState,
+          selectedElements[0],
+          elementsMap,
+        );
+      }
     }
     // Paint resize transformHandles
     context.save();

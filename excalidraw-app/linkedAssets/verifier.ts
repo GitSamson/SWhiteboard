@@ -34,7 +34,11 @@ import type {
 import { blobToDataURL } from "./convert";
 import { importNewFilesIntoFrame } from "./importer";
 import { invalidateLinkedOriginal } from "./originals";
-import { getFolderEntry, queryFolderPermission } from "./folderRegistry";
+import {
+  ensureFolderPermission,
+  getFolderEntry,
+  queryFolderPermission,
+} from "./folderRegistry";
 import { generateThumbnail } from "./thumbnail";
 import { isLinkedAssetsAvailable } from "./state";
 
@@ -290,6 +294,35 @@ const verifyFrame = async (
   if (newNames.length) {
     await importNewFilesIntoFrame(excalidrawAPI, frame.id, newNames);
   }
+};
+
+/**
+ * Verifies a single sync frame against its bound folder. Called from the
+ * frame's context menu, i.e. inside a user gesture, so a permission prompt
+ * is acceptable (unlike the background verify, which skips silently).
+ */
+export const verifySyncFrame = async (
+  excalidrawAPI: ExcalidrawImperativeAPI,
+  frameId: string,
+): Promise<void> => {
+  if (!isLinkedAssetsAvailable()) {
+    return;
+  }
+  const frame = excalidrawAPI
+    .getSceneElementsIncludingDeleted()
+    .find((el) => el.id === frameId) as ExcalidrawFrameElement | undefined;
+  const syncFolder = frame?.customData?.syncFolder as
+    | SyncFolderMeta
+    | undefined;
+  if (!frame || frame.isDeleted || !syncFolder) {
+    return;
+  }
+  const entry = await getFolderEntry(syncFolder.folderId);
+  if (entry && (await queryFolderPermission(entry.handle)) !== "granted") {
+    // manual refresh is a user gesture — ask instead of skipping silently
+    await ensureFolderPermission(entry.handle);
+  }
+  await verifyFrame(excalidrawAPI, frame, syncFolder);
 };
 
 /**

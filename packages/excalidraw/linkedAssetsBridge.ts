@@ -51,10 +51,12 @@ export interface LinkedAssetsBridge {
   ) => Promise<void>;
   /** un-deletes hidden linked images in a sync frame */
   showHiddenImages: (frame: ExcalidrawFrameElement) => void;
-  /** deletes the on-disk files of hidden linked images in a sync frame */
-  deleteHiddenImages: (frame: ExcalidrawFrameElement) => Promise<void>;
+  /** opens the confirmation dialog for deleting hidden images' files */
+  deleteHiddenImages: (frame: ExcalidrawFrameElement) => void;
   /** unhides and re-lays out a sync frame's linked images in a grid */
   resetSyncFrameLayout: (frame: ExcalidrawFrameElement) => void;
+  /** re-scans a sync frame's bound folder (user-triggered refresh) */
+  refreshSyncFrame: (frame: ExcalidrawFrameElement) => void;
 }
 
 let linkedAssetsBridge: LinkedAssetsBridge | null = null;

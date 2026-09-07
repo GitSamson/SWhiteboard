@@ -473,6 +473,40 @@ exports[`contextMenu element > does not show 'Download original image' for non-i
         },
         "viewMode": false,
       },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+        >
+          <path
+            d="M12.5 10.833 15.833 7.5 12.5 4.167M15.833 7.5H6.667a3.333 3.333 0 1 0 0 6.667H7.5"
+            strokeWidth="1.25"
+          />
+        </svg>,
+        "keywords": [
+          "image",
+          "refresh",
+          "rescan",
+          "folder",
+          "sync",
+          "frame",
+        ],
+        "label": "labels.refreshSyncFrame",
+        "name": "refreshSyncFrame",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
       "separator",
       {
         "icon": <svg
@@ -2074,6 +2108,40 @@ exports[`contextMenu element > right-clicking on a group should select whole gro
           "category": "menu",
         },
         "viewMode": false,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+        >
+          <path
+            d="M12.5 10.833 15.833 7.5 12.5 4.167M15.833 7.5H6.667a3.333 3.333 0 1 0 0 6.667H7.5"
+            strokeWidth="1.25"
+          />
+        </svg>,
+        "keywords": [
+          "image",
+          "refresh",
+          "rescan",
+          "folder",
+          "sync",
+          "frame",
+        ],
+        "label": "labels.refreshSyncFrame",
+        "name": "refreshSyncFrame",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
       },
       "separator",
       {
@@ -7092,6 +7160,40 @@ exports[`contextMenu element > shows 'Group selection' in context menu for multi
         },
         "viewMode": false,
       },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+        >
+          <path
+            d="M12.5 10.833 15.833 7.5 12.5 4.167M15.833 7.5H6.667a3.333 3.333 0 1 0 0 6.667H7.5"
+            strokeWidth="1.25"
+          />
+        </svg>,
+        "keywords": [
+          "image",
+          "refresh",
+          "rescan",
+          "folder",
+          "sync",
+          "frame",
+        ],
+        "label": "labels.refreshSyncFrame",
+        "name": "refreshSyncFrame",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
       "separator",
       {
         "icon": <svg
@@ -8608,6 +8710,40 @@ exports[`contextMenu element > shows 'Ungroup selection' in context menu for gro
           "category": "menu",
         },
         "viewMode": false,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+        >
+          <path
+            d="M12.5 10.833 15.833 7.5 12.5 4.167M15.833 7.5H6.667a3.333 3.333 0 1 0 0 6.667H7.5"
+            strokeWidth="1.25"
+          />
+        </svg>,
+        "keywords": [
+          "image",
+          "refresh",
+          "rescan",
+          "folder",
+          "sync",
+          "frame",
+        ],
+        "label": "labels.refreshSyncFrame",
+        "name": "refreshSyncFrame",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
       },
       "separator",
       {
@@ -10872,6 +11008,40 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
         },
         "viewMode": false,
       },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+        >
+          <path
+            d="M12.5 10.833 15.833 7.5 12.5 4.167M15.833 7.5H6.667a3.333 3.333 0 1 0 0 6.667H7.5"
+            strokeWidth="1.25"
+          />
+        </svg>,
+        "keywords": [
+          "image",
+          "refresh",
+          "rescan",
+          "folder",
+          "sync",
+          "frame",
+        ],
+        "label": "labels.refreshSyncFrame",
+        "name": "refreshSyncFrame",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
       "separator",
       {
         "icon": <svg
@@ -12162,6 +12332,40 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
           "category": "menu",
         },
         "viewMode": false,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+        >
+          <path
+            d="M12.5 10.833 15.833 7.5 12.5 4.167M15.833 7.5H6.667a3.333 3.333 0 1 0 0 6.667H7.5"
+            strokeWidth="1.25"
+          />
+        </svg>,
+        "keywords": [
+          "image",
+          "refresh",
+          "rescan",
+          "folder",
+          "sync",
+          "frame",
+        ],
+        "label": "labels.refreshSyncFrame",
+        "name": "refreshSyncFrame",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
       },
       "separator",
       {
