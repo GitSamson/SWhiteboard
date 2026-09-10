@@ -10,8 +10,9 @@
 
 import { setLinkedAssetsBridge } from "@excalidraw/excalidraw";
 import { setLinkedImageResolver } from "@excalidraw/excalidraw";
+import { setThumbnailResolver } from "@excalidraw/excalidraw";
 
-import { newFrameElement } from "@excalidraw/element";
+import { isFrameElement, newFrameElement } from "@excalidraw/element";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
@@ -38,6 +39,8 @@ import {
   renameImageTargetAtom,
 } from "./state";
 import { enqueueConvertToLinked, startSyncEngine } from "./syncEngine";
+import { createThumbnailResolver } from "./thumbnailResolver";
+import { enqueueThumbnailGeneration } from "./thumbnailStore";
 import { verifyLinkedAssets, verifySyncFrame } from "./verifier";
 
 import type { ConnectedFolderInfo } from "./state";
@@ -129,15 +132,46 @@ export const createSyncFrame = async (
 export const initLinkedAssets = (
   excalidrawAPI: ExcalidrawImperativeAPI,
 ): (() => void) => {
+  // thumbnail-first rendering is generic performance infrastructure — it
+  // helps embedded images too, so register it even when the File System
+  // Access API (and thus the linked-assets feature) is unavailable
+  setThumbnailResolver(createThumbnailResolver(excalidrawAPI));
+
   if (!isLinkedAssetsAvailable()) {
-    return () => {};
+    return () => {
+      setThumbnailResolver(null);
+    };
   }
 
   setLinkedAssetsBridge({
-    // drop/toolbar inserts become linked files; paste stays embedded
-    onImagesInserted: (source, _files, elements) => {
-      if (source !== "paste") {
-        enqueueConvertToLinked(excalidrawAPI, elements);
+    // only images that land INSIDE a live sync frame become linked files;
+    // paste is always embedded, and drops/toolbar inserts outside any sync
+    // frame stay embedded too (no implicit folder writes)
+    onImagesInserted: (source, files, elements) => {
+      const syncFrameIds = new Set(
+        excalidrawAPI
+          .getSceneElements()
+          .filter((el) => isFrameElement(el) && el.customData?.syncFolder)
+          .map((el) => el.id),
+      );
+      const toLink =
+        source === "paste"
+          ? []
+          : elements.filter((el) => el.frameId && syncFrameIds.has(el.frameId));
+      if (toLink.length) {
+        enqueueConvertToLinked(excalidrawAPI, toLink);
+      }
+      // images staying embedded: build thumbnail tiers in the background so
+      // the render cache can decode thumbnails instead of originals next time
+      const linkedIds = new Set(toLink.map((el) => el.id));
+      for (const element of elements) {
+        if (linkedIds.has(element.id)) {
+          continue;
+        }
+        const fileData = element.fileId && files[element.fileId];
+        if (fileData) {
+          enqueueThumbnailGeneration(fileData.id, fileData.dataURL);
+        }
       }
     },
     // hi-res originals for canvas rendering / export
@@ -165,7 +199,8 @@ export const initLinkedAssets = (
   });
 
   // the element package's image cache asks this resolver before decoding a
-  // linked image's thumbnail dataURL
+  // linked image's full-resolution original (quality upgrades and export;
+  // plain cache fills are served by the thumbnail resolver above)
   setLinkedImageResolver(createLinkedImageResolver(excalidrawAPI));
 
   // keep the missing-linked counter atom in sync for the banner UI
@@ -205,6 +240,7 @@ export const initLinkedAssets = (
     unsubscribeInitialVerify();
     stopSyncEngine();
     unsubscribeMissingCount();
+    setThumbnailResolver(null);
     setLinkedImageResolver(null);
     clearLinkedOriginalCache();
     setLinkedAssetsBridge(null);

@@ -461,6 +461,11 @@ export { CaptureUpdateAction } from "@excalidraw/element";
 
 export { setLinkedImageResolver } from "@excalidraw/element";
 export type { LinkedImageResolver } from "@excalidraw/element";
+export { setThumbnailResolver } from "@excalidraw/element";
+export type {
+  ThumbnailResolver,
+  ThumbnailResolverResult,
+} from "@excalidraw/element";
 
 export {
   setLinkedAssetsBridge,

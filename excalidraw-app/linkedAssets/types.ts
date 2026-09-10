@@ -20,6 +20,14 @@ export interface LinkedFileMeta {
   /** display name (== relPath basename) */
   displayName: string;
   status: "ok" | "missing";
+  /**
+   * full-resolution dimensions of the original image, recorded at
+   * import/conversion time. The render cache needs them to map crop
+   * coordinates onto the embedded thumbnail. Optional: scenes saved before
+   * this field existed fall back to loading the original from disk.
+   */
+  width?: number;
+  height?: number;
 }
 
 export interface SyncFolderManifestEntry {

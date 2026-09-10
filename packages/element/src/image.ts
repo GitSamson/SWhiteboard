@@ -52,6 +52,70 @@ export const setLinkedImageResolver = (
   linkedImageResolver = resolver;
 };
 
+/**
+ * Optional resolver injected by the app layer for thumbnail-first rendering.
+ * Before the cache decodes the full-resolution image, the resolver may
+ * return a downscaled (thumbnail) dataURL plus the original dimensions, so
+ * the renderer can map crop coordinates (which live in original-image pixel
+ * space) onto the decoded thumbnail via `sourceScale`. Returning `null`
+ * (or throwing) falls back to the full-resolution source.
+ */
+export type ThumbnailResolverResult = {
+  dataURL: DataURL;
+  /** full-resolution image dimensions in px */
+  originalWidth: number;
+  originalHeight: number;
+};
+
+export type ThumbnailResolver = (
+  fileId: FileId,
+  fileData: BinaryFiles[string],
+  opts: {
+    /**
+     * largest on-screen size (device px) the element is expected to be
+     * displayed at, when known — lets the resolver pick a fitting tier
+     */
+    maxDisplayPx?: number;
+  },
+) => Promise<ThumbnailResolverResult | null>;
+
+let thumbnailResolver: ThumbnailResolver | null = null;
+
+export const setThumbnailResolver = (
+  resolver: ThumbnailResolver | null,
+): void => {
+  thumbnailResolver = resolver;
+};
+
+const resolveImageSource = async (
+  fileId: FileId,
+  fileData: BinaryFiles[string],
+  forceOriginal: boolean,
+  maxDisplayPx?: number,
+): Promise<{
+  dataURL: DataURL;
+  originalWidth?: number;
+  originalHeight?: number;
+}> => {
+  if (!forceOriginal && thumbnailResolver) {
+    try {
+      const thumbnail = await thumbnailResolver(fileId, fileData, {
+        maxDisplayPx,
+      });
+      if (
+        thumbnail &&
+        thumbnail.originalWidth > 0 &&
+        thumbnail.originalHeight > 0
+      ) {
+        return thumbnail;
+      }
+    } catch (error) {
+      console.warn("thumbnail resolver failed, using original", error);
+    }
+  }
+  return { dataURL: await resolveLinkedOriginal(fileId, fileData) };
+};
+
 const resolveLinkedOriginal = async (
   fileId: FileId,
   fileData: BinaryFiles[string],
@@ -75,10 +139,20 @@ export const updateImageCache = async ({
   fileIds,
   files,
   imageCache,
+  forceOriginal = false,
+  thumbnailHints,
 }: {
   fileIds: FileId[];
   files: BinaryFiles;
   imageCache: AppClassProperties["imageCache"];
+  /**
+   * skips the thumbnail resolver and decodes the full-resolution source
+   * (linked original / embedded dataURL) — used to upgrade images that are
+   * displayed larger than their cached thumbnail
+   */
+  forceOriginal?: boolean;
+  /** per-file display-size hints forwarded to the thumbnail resolver */
+  thumbnailHints?: Map<FileId, number>;
 }) => {
   const updatedFiles = new Map<FileId, true>();
   const erroredFiles = new Map<FileId, true>();
@@ -95,8 +169,14 @@ export const updateImageCache = async ({
                 throw new Error("Only images can be added to ImageCache");
               }
 
-              const imagePromise = resolveLinkedOriginal(fileId, fileData).then(
-                (dataURL) => loadHTMLImageElement(dataURL),
+              const sourcePromise = resolveImageSource(
+                fileId,
+                fileData,
+                forceOriginal,
+                thumbnailHints?.get(fileId),
+              );
+              const imagePromise = sourcePromise.then((source) =>
+                loadHTMLImageElement(source.dataURL),
               );
               const data = {
                 image: imagePromise,
@@ -107,8 +187,14 @@ export const updateImageCache = async ({
               imageCache.set(fileId, data);
 
               const image = await imagePromise;
+              const source = await sourcePromise;
+              // crop coordinates live in original-image pixel space; when the
+              // cache holds a thumbnail, renderers must scale them down
+              const sourceScale = source.originalWidth
+                ? image.naturalWidth / source.originalWidth
+                : 1;
 
-              imageCache.set(fileId, { ...data, image });
+              imageCache.set(fileId, { ...data, image, sourceScale });
             } catch (error: any) {
               erroredFiles.set(fileId, true);
             }

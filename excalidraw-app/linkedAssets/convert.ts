@@ -252,6 +252,8 @@ export const convertElementsToLinked = async (
         mimeType: fileData.mimeType,
         displayName: relPath.split("/").pop() ?? relPath,
         status: "ok",
+        width: thumbnail.originalWidth,
+        height: thumbnail.originalHeight,
       };
 
       excalidrawAPI.updateScene({

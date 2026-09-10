@@ -1117,6 +1117,13 @@ export type AppClassProperties = {
     {
       image: HTMLImageElement | Promise<HTMLImageElement>;
       mimeType: ValueOf<typeof IMAGE_MIME_TYPES>;
+      /**
+       * ratio of the decoded image's natural size to the original
+       * (full-resolution) image size — 1 (or undefined) when the cache holds
+       * the original; < 1 when it holds a downscaled thumbnail. Renderers
+       * multiply crop coordinates (original pixel space) by this factor.
+       */
+      sourceScale?: number;
     }
   >;
   files: BinaryFiles;

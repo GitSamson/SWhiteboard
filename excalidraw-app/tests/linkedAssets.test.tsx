@@ -44,6 +44,8 @@ vi.mock("../linkedAssets/thumbnail", async (importOriginal) => {
       dataURL: "data:image/webp;base64,AAAA",
       width: 100,
       height: 100,
+      originalWidth: 800,
+      originalHeight: 800,
     }),
   };
 });

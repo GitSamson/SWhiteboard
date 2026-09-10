@@ -32,6 +32,7 @@ import type {
 } from "@excalidraw/excalidraw/types";
 
 import { blobToDataURL } from "./convert";
+import { isImportableAssetFile } from "./assetTypes";
 import { importNewFilesIntoFrame } from "./importer";
 import { invalidateLinkedOriginal } from "./originals";
 import {
@@ -43,8 +44,6 @@ import { generateThumbnail } from "./thumbnail";
 import { isLinkedAssetsAvailable } from "./state";
 
 import type { LinkedFileMeta, SyncFolderMeta } from "./types";
-
-const IMAGE_FILE_PATTERN = /\.(png|jpe?g|gif|webp|svg|bmp|ico|avif|jfif)$/i;
 
 interface DiskFileInfo {
   name: string;
@@ -147,13 +146,21 @@ const verifyFrame = async (
   }
 
   // regenerate thumbnails for modified files
-  const newThumbnails: Record<string, { dataURL: DataURL; size: number }> = {};
+  const newThumbnails: Record<
+    string,
+    { dataURL: DataURL; size: number; width: number; height: number }
+  > = {};
   for (const relPath of modifiedPaths) {
     try {
       const fileHandle = await entry.handle.getFileHandle(relPath);
       const file = await fileHandle.getFile();
       const thumbnail = await generateThumbnail(await blobToDataURL(file));
-      newThumbnails[relPath] = { dataURL: thumbnail.dataURL, size: file.size };
+      newThumbnails[relPath] = {
+        dataURL: thumbnail.dataURL,
+        size: file.size,
+        width: thumbnail.originalWidth,
+        height: thumbnail.originalHeight,
+      };
     } catch (error) {
       console.warn(`failed to refresh thumbnail for ${relPath}`, error);
     }
@@ -234,6 +241,8 @@ const verifyFrame = async (
             ...meta,
             fileSize: newThumbnails[meta.relPath].size,
             status: "ok",
+            width: newThumbnails[meta.relPath].width,
+            height: newThumbnails[meta.relPath].height,
           };
           return newElementWith(element, {
             customData: { ...element.customData, linkedFile: nextMeta },
@@ -287,7 +296,7 @@ const verifyFrame = async (
   // new files on disk unknown to the manifest → import into the frame
   const newNames = diskFiles.filter(
     (f) =>
-      IMAGE_FILE_PATTERN.test(f.name) &&
+      isImportableAssetFile({ name: f.name }) &&
       !manifestKnows(manifest, renames, f.name) &&
       !consumedDiskNames.has(f.name),
   );

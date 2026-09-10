@@ -42,6 +42,10 @@ interface ImportMetaEnv {
   // File System Access API). Compared as a string, e.g. `=== "true"`.
   VITE_APP_ENABLE_LINKED_FILES: string;
 
+  // Enable the Pixi.js (WebGL) static-scene compositor. Compared as a
+  // string, e.g. `=== "true"`.
+  VITE_APP_ENABLE_PIXI_RENDERER: string;
+
   MODE: string;
 
   DEV: string;

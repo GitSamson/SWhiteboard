@@ -208,6 +208,8 @@ export const importNewFilesIntoFrame = async (
         mimeType: file.type,
         displayName: name,
         status: "ok",
+        width: thumbnail.originalWidth,
+        height: thumbnail.originalHeight,
       };
 
       newElements.push(

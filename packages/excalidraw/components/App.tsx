@@ -350,6 +350,8 @@ import { ActionManager } from "../actions/manager";
 import { actions } from "../actions/register";
 import { getLinkedAssetsBridge } from "../linkedAssetsBridge";
 
+import { isPixiRendererEnabled } from "../renderer/pixiRuntime";
+
 import { getShortcutFromShortcutName } from "../actions/shortcuts";
 import { trackEvent } from "../analytics";
 import {
@@ -883,7 +885,15 @@ class App extends React.Component<AppProps, AppState> {
     this.scene = new Scene();
 
     this.canvas = this.ownerDocument.createElement("canvas");
-    this.rc = rough.canvas(this.canvas);
+    // when the Pixi compositor owns the static canvas it holds the WebGL
+    // context, so no 2d context can ever be acquired from it — give
+    // rough.js a throwaway canvas instead (it's only used by the Canvas2D
+    // static path, which Pixi replaces)
+    this.rc = rough.canvas(
+      isPixiRendererEnabled()
+        ? this.ownerDocument.createElement("canvas")
+        : this.canvas,
+    );
     this.renderer = new Renderer(this.scene);
     this.visibleElements = [];
 
@@ -4204,6 +4214,9 @@ class App extends React.Component<AppProps, AppState> {
         this.state.scrollY,
         this.state.zoom,
       );
+      // zooming/panning may make thumbnail-cached images visibly blurry —
+      // schedule upgrades of the now-large visible ones to their originals
+      this.scheduleImageQualitySync();
     }
 
     if (
@@ -7015,6 +7028,23 @@ class App extends React.Component<AppProps, AppState> {
 
   private startImageCropping = (image: ExcalidrawImageElement) => {
     this.store.scheduleCapture();
+    // crop coordinates are recorded in the cached image's pixel space;
+    // make sure that's the original (full-resolution) image, not a
+    // thumbnail, so crop.naturalWidth/naturalHeight stay stable
+    if (
+      isInitializedImageElement(image) &&
+      this.files[image.fileId] &&
+      (this.imageCache.get(image.fileId)?.sourceScale ?? 1) < 1
+    ) {
+      void this.updateImageCache([image], this.files, {
+        forceOriginal: true,
+      }).then(({ updatedFiles }) => {
+        if (updatedFiles.has(image.fileId)) {
+          ShapeCache.delete(image);
+          this.scene.triggerUpdate();
+        }
+      });
+    }
     this.setState({
       croppingElementId: image.id,
     });
@@ -12816,11 +12846,25 @@ class App extends React.Component<AppProps, AppState> {
   private updateImageCache = async (
     elements: readonly InitializedExcalidrawImageElement[],
     files = this.files,
+    opts: { forceOriginal?: boolean } = {},
   ) => {
     const { updatedFiles, erroredFiles } = await _updateImageCache({
       imageCache: this.imageCache,
       fileIds: elements.map((element) => element.fileId),
       files,
+      forceOriginal: opts.forceOriginal,
+      thumbnailHints: new Map(
+        elements.map((element) => [
+          element.fileId,
+          // expected on-screen size in device px; for cropped images the
+          // source strip spans the uncropped size
+          (element.crop
+            ? getUncroppedWidthAndHeight(element).width
+            : element.width) *
+            this.state.zoom.value *
+            (this.ownerWindow.devicePixelRatio || 1),
+        ]),
+      ),
     });
 
     if (erroredFiles.size) {
@@ -12871,6 +12915,10 @@ class App extends React.Component<AppProps, AppState> {
       if (updatedFiles.size) {
         this.scene.triggerUpdate();
       }
+
+      // images rendered larger than their cached thumbnail right after the
+      // fill (e.g. a zoomed-in scene on load) get upgraded to originals
+      this.scheduleImageQualitySync();
     }
   };
 
@@ -12879,6 +12927,91 @@ class App extends React.Component<AppProps, AppState> {
   private scheduleImageRefresh = throttle(() => {
     this.addNewImagesToImageCache();
   }, IMAGE_RENDER_TIMEOUT);
+
+  /**
+   * Upgrades thumbnail-cached images to their original resolution when they
+   * are displayed larger than the cached thumbnail (e.g. after zooming in).
+   * Throttled; runs on zoom/scroll changes and after image-cache fills.
+   */
+  private scheduleImageQualitySync = throttle(() => {
+    void this.syncImageQuality();
+  }, IMAGE_RENDER_TIMEOUT);
+
+  private syncImageQuality = async () => {
+    const zoom = this.state.zoom.value;
+    const dpr = this.ownerWindow.devicePixelRatio || 1;
+    const elementsMap = this.scene.getNonDeletedElementsMap();
+    const croppingId = this.state.croppingElementId;
+
+    const toUpgrade: InitializedExcalidrawImageElement[] = [];
+    for (const element of getInitializedImageElements(
+      this.scene.getNonDeletedElements(),
+    )) {
+      // never swap the image underneath an active crop session — crop
+      // coordinates are recorded in the cached image's pixel space
+      if (element.id === croppingId) {
+        continue;
+      }
+      const entry = this.imageCache.get(element.fileId);
+      if (!entry || entry.image instanceof Promise) {
+        continue;
+      }
+      const sourceScale = entry.sourceScale ?? 1;
+      if (sourceScale >= 1) {
+        continue;
+      }
+      const displayWidth =
+        (element.crop
+          ? getUncroppedWidthAndHeight(element).width
+          : element.width) *
+        zoom *
+        dpr;
+      // hysteresis so borderline sizes don't flap between thumbnail/original
+      if (displayWidth <= entry.image.naturalWidth * 1.25) {
+        continue;
+      }
+      if (
+        !isElementInViewport(
+          element,
+          this.state.width,
+          this.state.height,
+          {
+            offsetLeft: this.state.offsetLeft,
+            offsetTop: this.state.offsetTop,
+            scrollX: this.state.scrollX,
+            scrollY: this.state.scrollY,
+            zoom: this.state.zoom,
+          },
+          elementsMap,
+        )
+      ) {
+        continue;
+      }
+      toUpgrade.push(element);
+      // cap the batch so a zoom-into-a-huge-board doesn't burst-decode
+      // hundreds of originals at once; the next throttled run picks up more
+      if (toUpgrade.length >= 20) {
+        break;
+      }
+    }
+
+    if (!toUpgrade.length) {
+      return;
+    }
+    const { updatedFiles } = await this.updateImageCache(
+      toUpgrade,
+      this.files,
+      { forceOriginal: true },
+    );
+    if (updatedFiles.size) {
+      for (const element of toUpgrade) {
+        if (updatedFiles.has(element.fileId)) {
+          ShapeCache.delete(element);
+        }
+      }
+      this.scene.triggerUpdate();
+    }
+  };
 
   private clearSelection(hitElement: ExcalidrawElement | null): void {
     this.setState((prevState) => ({

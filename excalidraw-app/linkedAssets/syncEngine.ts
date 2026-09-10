@@ -189,7 +189,11 @@ export const startSyncEngine = (
           !linked &&
           !!element.fileId &&
           !!files[element.fileId]?.dataURL &&
-          (!prev || prev.frameId !== frameId)
+          // only a transition into the frame counts — elements BORN with
+          // this frameId (paste/grid insert; `prev` is unknown) are left
+          // alone: the insertion bridge decides whether they convert
+          prev !== undefined &&
+          prev.frameId !== frameId
         ) {
           toConvert.push(element);
         }

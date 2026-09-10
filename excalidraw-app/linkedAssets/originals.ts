@@ -41,7 +41,7 @@ export const invalidateLinkedOriginal = (fileId: string): void => {
   originalCache.delete(fileId);
 };
 
-const findLinkedMetaByFileId = (
+export const findLinkedMetaByFileId = (
   excalidrawAPI: ExcalidrawImperativeAPI,
   fileId: FileId,
 ): LinkedFileMeta | null => {

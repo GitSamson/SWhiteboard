@@ -8,6 +8,11 @@ import type {
 } from "@excalidraw/element/types";
 
 import { isRenderThrottlingEnabled } from "../../reactUtils";
+import {
+  destroyPixiStaticScene,
+  renderPixiStaticScene,
+} from "../../renderer/pixiStaticScene";
+import { isPixiRendererEnabled } from "../../renderer/pixiRuntime";
 import { renderStaticScene } from "../../renderer/staticScene";
 
 import type {
@@ -33,6 +38,12 @@ type StaticCanvasProps = {
 const StaticCanvas = (props: StaticCanvasProps) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isComponentMounted = useRef(false);
+  /**
+   * once Pixi init has failed (WebGL unsupported), stay on the Canvas2D
+   * path; while init is merely pending we skip frames instead of touching
+   * the canvas's 2d context (a canvas Pixi claimed can't go back to 2d)
+   */
+  const pixiUnavailable = useRef(false);
 
   useEffect(() => {
     props.canvas.style.width = `${props.appState.width}px`;
@@ -40,6 +51,16 @@ const StaticCanvas = (props: StaticCanvasProps) => {
     props.canvas.width = props.appState.width * props.scale;
     props.canvas.height = props.appState.height * props.scale;
   }, [props.appState.height, props.appState.width, props.canvas, props.scale]);
+
+  // teardown the Pixi renderer (WebGL resources) on unmount
+  useEffect(() => {
+    const canvas = props.canvas;
+    return () => {
+      if (isPixiRendererEnabled()) {
+        destroyPixiStaticScene(canvas);
+      }
+    };
+  }, [props.canvas]);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -56,19 +77,29 @@ const StaticCanvas = (props: StaticCanvasProps) => {
       canvas.classList.add("excalidraw__canvas", "static");
     }
 
-    renderStaticScene(
-      {
-        canvas,
-        rc: props.rc,
-        scale: props.scale,
-        elementsMap: props.elementsMap,
-        allElementsMap: props.allElementsMap,
-        visibleElements: props.visibleElements,
-        appState: props.appState,
-        renderConfig: props.renderConfig,
-      },
-      isRenderThrottlingEnabled(),
-    );
+    const sceneConfig = {
+      canvas,
+      rc: props.rc,
+      scale: props.scale,
+      elementsMap: props.elementsMap,
+      allElementsMap: props.allElementsMap,
+      visibleElements: props.visibleElements,
+      appState: props.appState,
+      renderConfig: props.renderConfig,
+    };
+
+    if (isPixiRendererEnabled() && !pixiUnavailable.current) {
+      const result = renderPixiStaticScene(
+        sceneConfig,
+        isRenderThrottlingEnabled(),
+      );
+      if (result === "rendered" || result === "pending") {
+        return;
+      }
+      pixiUnavailable.current = true;
+    }
+
+    renderStaticScene(sceneConfig, isRenderThrottlingEnabled());
   });
 
   return <div className="excalidraw__canvas-wrapper" ref={wrapperRef} />;

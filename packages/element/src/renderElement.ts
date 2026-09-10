@@ -90,7 +90,7 @@ const isPendingImageElement = (
   isInitializedImageElement(element) &&
   !renderConfig.imageCache.has(element.fileId);
 
-const getCanvasPadding = (element: ExcalidrawElement) => {
+export const getCanvasPadding = (element: ExcalidrawElement) => {
   switch (element.type) {
     case "freedraw":
       return element.strokeWidth * 12;
@@ -199,7 +199,7 @@ const cappedElementCanvasSize = (
   return { width, height, scale };
 };
 
-const generateElementCanvas = (
+export const generateElementCanvas = (
   element: NonDeletedExcalidrawElement,
   elementsMap: NonDeletedSceneElementsMap,
   zoom: Zoom,
@@ -389,8 +389,21 @@ const drawElementOnCanvas = (
           context.clip();
         }
 
+        // crop coords live in the pixel space of the image that was cached
+        // when cropping started (crop.naturalWidth/naturalHeight); the cache
+        // may now hold a thumbnail or the original, so rescale into the
+        // currently decoded image's pixel space
+        const cropScale =
+          element.crop && element.crop.naturalWidth > 0
+            ? img.naturalWidth / element.crop.naturalWidth
+            : 1;
         const { x, y, width, height } = element.crop
-          ? element.crop
+          ? {
+              x: element.crop.x * cropScale,
+              y: element.crop.y * cropScale,
+              width: element.crop.width * cropScale,
+              height: element.crop.height * cropScale,
+            }
           : {
               x: 0,
               y: 0,
@@ -536,7 +549,7 @@ export const elementWithCanvasCache = new WeakMap<
   ExcalidrawElementWithCanvas
 >();
 
-const generateElementWithCanvas = (
+export const generateElementWithCanvas = (
   element: NonDeletedExcalidrawElement,
   elementsMap: NonDeletedSceneElementsMap,
   renderConfig: StaticCanvasRenderConfig,

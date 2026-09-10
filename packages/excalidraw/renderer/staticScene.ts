@@ -43,7 +43,7 @@ import type {
 } from "../scene/types";
 import type { StaticCanvasAppState, Zoom } from "../types";
 
-const GridLineColor = {
+export const GridLineColor = {
   [THEME.LIGHT]: {
     bold: "#dddddd",
     regular: "#e5e5e5",
@@ -166,70 +166,106 @@ const linkIconCanvasCache: {
   elementLink: null,
 };
 
+/**
+ * Resolves the cached link-icon canvas plus its scene-space placement for
+ * `element`, or null when no icon should be drawn. Shared by the Canvas2D
+ * static scene and the Pixi compositor.
+ */
+export const getLinkIconRenderData = (
+  element: NonDeletedExcalidrawElement,
+  appState: StaticCanvasAppState,
+  elementsMap: ElementsMap,
+): {
+  canvas: HTMLCanvasElement;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  centerX: number;
+  centerY: number;
+  angle: number;
+  opacity: number;
+} | null => {
+  if (!element.link || appState.selectedElementIds[element.id]) {
+    return null;
+  }
+  const [x1, y1, x2, y2] = getElementAbsoluteCoords(element, elementsMap);
+  const [x, y, width, height] = getLinkHandleFromCoords(
+    [x1, y1, x2, y2],
+    element.angle,
+    appState,
+  );
+  const centerX = x + width / 2;
+  const centerY = y + height / 2;
+
+  const canvasKey = isElementLink(element.link) ? "elementLink" : "regularLink";
+
+  let linkCanvas = linkIconCanvasCache[canvasKey];
+
+  if (!linkCanvas || linkCanvas.zoom !== appState.zoom.value) {
+    linkCanvas = Object.assign(document.createElement("canvas"), {
+      zoom: appState.zoom.value,
+    });
+    linkCanvas.width = width * window.devicePixelRatio * appState.zoom.value;
+    linkCanvas.height = height * window.devicePixelRatio * appState.zoom.value;
+    linkIconCanvasCache[canvasKey] = linkCanvas;
+
+    const linkCanvasCacheContext = linkCanvas.getContext("2d")!;
+    linkCanvasCacheContext.scale(
+      window.devicePixelRatio * appState.zoom.value,
+      window.devicePixelRatio * appState.zoom.value,
+    );
+
+    // Seed a sane default so a corrupted color (silently rejected by the
+    // canvas) falls back to white instead of a stale fillStyle.
+    linkCanvasCacheContext.fillStyle = COLOR_WHITE;
+    linkCanvasCacheContext.fillStyle =
+      appState.viewBackgroundColor || COLOR_WHITE;
+
+    linkCanvasCacheContext.fillRect(0, 0, width, height);
+
+    if (canvasKey === "elementLink") {
+      linkCanvasCacheContext.drawImage(ELEMENT_LINK_IMG, 0, 0, width, height);
+    } else {
+      linkCanvasCacheContext.drawImage(EXTERNAL_LINK_IMG, 0, 0, width, height);
+    }
+  }
+
+  return {
+    canvas: linkCanvas,
+    x,
+    y,
+    width,
+    height,
+    centerX,
+    centerY,
+    angle: element.angle,
+    opacity: element.opacity / 100,
+  };
+};
+
 const renderLinkIcon = (
   element: NonDeletedExcalidrawElement,
   context: CanvasRenderingContext2D,
   appState: StaticCanvasAppState,
   elementsMap: ElementsMap,
 ) => {
-  if (element.link && !appState.selectedElementIds[element.id]) {
-    const [x1, y1, x2, y2] = getElementAbsoluteCoords(element, elementsMap);
-    const [x, y, width, height] = getLinkHandleFromCoords(
-      [x1, y1, x2, y2],
-      element.angle,
-      appState,
-    );
-    const centerX = x + width / 2;
-    const centerY = y + height / 2;
+  const data = getLinkIconRenderData(element, appState, elementsMap);
+  if (data) {
     context.save();
-    context.translate(appState.scrollX + centerX, appState.scrollY + centerY);
-    context.rotate(element.angle);
-
-    const canvasKey = isElementLink(element.link)
-      ? "elementLink"
-      : "regularLink";
-
-    let linkCanvas = linkIconCanvasCache[canvasKey];
-
-    if (!linkCanvas || linkCanvas.zoom !== appState.zoom.value) {
-      linkCanvas = Object.assign(document.createElement("canvas"), {
-        zoom: appState.zoom.value,
-      });
-      linkCanvas.width = width * window.devicePixelRatio * appState.zoom.value;
-      linkCanvas.height =
-        height * window.devicePixelRatio * appState.zoom.value;
-      linkIconCanvasCache[canvasKey] = linkCanvas;
-
-      const linkCanvasCacheContext = linkCanvas.getContext("2d")!;
-      linkCanvasCacheContext.scale(
-        window.devicePixelRatio * appState.zoom.value,
-        window.devicePixelRatio * appState.zoom.value,
-      );
-
-      // Seed a sane default so a corrupted color (silently rejected by the
-      // canvas) falls back to white instead of a stale fillStyle.
-      linkCanvasCacheContext.fillStyle = COLOR_WHITE;
-      linkCanvasCacheContext.fillStyle =
-        appState.viewBackgroundColor || COLOR_WHITE;
-
-      linkCanvasCacheContext.fillRect(0, 0, width, height);
-
-      if (canvasKey === "elementLink") {
-        linkCanvasCacheContext.drawImage(ELEMENT_LINK_IMG, 0, 0, width, height);
-      } else {
-        linkCanvasCacheContext.drawImage(
-          EXTERNAL_LINK_IMG,
-          0,
-          0,
-          width,
-          height,
-        );
-      }
-
-      linkCanvasCacheContext.restore();
-    }
-    context.globalAlpha = element.opacity / 100;
-    context.drawImage(linkCanvas, x - centerX, y - centerY, width, height);
+    context.translate(
+      appState.scrollX + data.centerX,
+      appState.scrollY + data.centerY,
+    );
+    context.rotate(data.angle);
+    context.globalAlpha = data.opacity;
+    context.drawImage(
+      data.canvas,
+      data.x - data.centerX,
+      data.y - data.centerY,
+      data.width,
+      data.height,
+    );
     context.restore();
   }
 };
