@@ -779,6 +779,10 @@
     "orphanedKeep": "保留图片",
     "orphanedDelete": "删除图片",
     "syncFolderExpand": "展开文件列表",
-    "syncFolderCollapse": "收起文件列表"
+    "syncFolderCollapse": "收起文件列表",
+    "reconnectBanner": "文件夹 \"{{name}}\" 需要重新授权才能恢复同步",
+    "relinkBanner": "文件夹 \"{{name}}\" 未在此设备上关联",
+    "reconnectButton": "重新连接",
+    "relinkButton": "重新关联文件夹"
   }
 }

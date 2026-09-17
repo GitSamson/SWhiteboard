@@ -34,6 +34,20 @@ export const connectedFoldersAtom = atom<Record<string, ConnectedFolderInfo>>(
   {},
 );
 
+/**
+ * Live connection status of each sync frame's folder, derived from the
+ * folder registry + permission state and refreshed after verify runs,
+ * scene reloads, window focus, and reconnects.
+ */
+export type FolderConnectionStatus =
+  | "connected"
+  | "needs-permission"
+  | "handle-missing";
+
+export const folderConnectionStatusAtom = atom<
+  Record<string, FolderConnectionStatus>
+>({});
+
 /** number of linked image elements currently marked "missing" */
 export const missingLinkedCountAtom = atom(0);
 

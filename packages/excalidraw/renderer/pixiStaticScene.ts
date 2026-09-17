@@ -50,6 +50,8 @@ import {
 
 import { isRightAngleRads } from "@excalidraw/math";
 
+import type { ExcalidrawElementWithCanvas } from "@excalidraw/element";
+
 import type {
   ExcalidrawFrameLikeElement,
   ExcalidrawImageElement,
@@ -67,6 +69,12 @@ import type { StaticSceneRenderConfig } from "../scene/types";
  *  pop in over the following frames instead of stalling a single frame */
 const MAX_TEXTURE_REVEALS_PER_FRAME = 8;
 
+/** max regenerated-canvas texture swaps (re-uploads) per frame; zooming
+ *  settles into a new cache bucket which regenerates EVERY visible element
+ *  canvas at once — uploading hundreds of textures in one frame stalls for
+ *  seconds, so swaps are spread over frames (stale texture shows meanwhile) */
+const MAX_TEXTURE_SWAPS_PER_FRAME = 16;
+
 const Z_GRID = -1;
 const Z_LINK_ICON_OFFSET = 0.5;
 
@@ -75,8 +83,13 @@ type ElementSpriteRecord = {
   texture: Texture;
   /** the offscreen-canvas record the texture was created from — when the
    *  WeakMap cache regenerates (zoom bucket/theme/crop change), the record
-   *  identity changes and we re-create the texture */
-  withCanvas: object;
+   *  identity changes and we re-create the texture. Invariant: this always
+   *  describes the canvas the sprite's current texture was built from (it
+   *  only changes together with sprite.texture), so transforms derived from
+   *  its scale can never disagree with the displayed bitmap */
+  withCanvas: ExcalidrawElementWithCanvas;
+  /** latest regenerated record awaiting its texture swap (rate-limited) */
+  pendingWithCanvas: ExcalidrawElementWithCanvas | null;
   mask: Graphics | null;
 };
 
@@ -110,8 +123,16 @@ class PixiStaticSceneRenderer {
 
   /** brand-new sprites whose textures haven't been revealed (uploaded) yet */
   private revealBacklog: Sprite[] = [];
+  /** records with a regenerated canvas awaiting a rate-limited texture swap */
+  private swapBacklog = new Set<ElementSpriteRecord>();
   private continuationRaf: number | null = null;
   private lastConfig: StaticSceneRenderConfig | null = null;
+
+  /** last canvas size / resolution passed to renderer.resize() */
+  private lastResize = { width: -1, height: -1, resolution: -1 };
+
+  /** last-rendered grid parameters; redraw skipped while unchanged */
+  private lastGridSignature = "";
 
   private removeContextLostListener: (() => void) | null = null;
 
@@ -149,6 +170,10 @@ class PixiStaticSceneRenderer {
           resolution: dpr,
           autoDensity: true,
           backgroundAlpha: 0,
+          // render on demand (render() calls app.render()) — the default
+          // ticker would re-composite the whole stage at 60fps even when
+          // nothing changed, doubling GPU load against the interactive canvas
+          autoStart: false,
         })
         .then(() => {
           if (this.destroyed) {
@@ -197,6 +222,8 @@ class PixiStaticSceneRenderer {
       win?.cancelAnimationFrame(this.continuationRaf);
       this.continuationRaf = null;
     }
+    this.revealBacklog = [];
+    this.swapBacklog.clear();
     this.removeContextLostListener?.();
     for (const record of this.elementSprites.values()) {
       record.texture.destroy(true);
@@ -233,13 +260,21 @@ class PixiStaticSceneRenderer {
     // ------------------------------------------------------------------
     // canvas size / resolution
     // ------------------------------------------------------------------
+    // renderer.width/height are in physical pixels (css × resolution), so
+    // track the resize inputs ourselves — with dpr ≠ 1 the raw comparison
+    // was true every frame, needlessly re-running resize()
     if (
-      app.renderer.width !== appState.width ||
-      app.renderer.height !== appState.height ||
-      app.renderer.resolution !== scale
+      this.lastResize.width !== appState.width ||
+      this.lastResize.height !== appState.height ||
+      this.lastResize.resolution !== scale
     ) {
       app.renderer.resolution = scale;
       app.renderer.resize(appState.width, appState.height);
+      this.lastResize = {
+        width: appState.width,
+        height: appState.height,
+        resolution: scale,
+      };
     }
 
     // ------------------------------------------------------------------
@@ -266,6 +301,34 @@ class PixiStaticSceneRenderer {
     this.root.position.set(appState.scrollX * zoom, appState.scrollY * zoom);
 
     this.renderGrid(config);
+
+    // Swap regenerated textures at a bounded rate (see swapBacklog) BEFORE
+    // placing elements: each drained record is promoted to its latest
+    // withCanvas, and placeElement derives the sprite transform from
+    // record.withCanvas — so a swapped sprite's new texture and new mapping
+    // reach the screen in the same app.render() pass. Records past the
+    // per-frame budget keep the old texture AND the old mapping until
+    // drained (consistent, just blurry — no magnified flash).
+    let swapsLeft = MAX_TEXTURE_SWAPS_PER_FRAME;
+    for (const record of this.swapBacklog) {
+      if (swapsLeft <= 0) {
+        break;
+      }
+      this.swapBacklog.delete(record);
+      swapsLeft--;
+      const pending = record.pendingWithCanvas;
+      record.pendingWithCanvas = null;
+      if (!pending || record.sprite.destroyed) {
+        continue;
+      }
+      // note: `pending` may lag the very latest cache entry when zooming
+      // continuously — placeElement re-registers the record if so
+      const texture = Texture.from(pending.canvas);
+      record.texture.destroy(true);
+      record.texture = texture;
+      record.withCanvas = pending;
+      record.sprite.texture = texture;
+    }
 
     // ------------------------------------------------------------------
     // elements
@@ -342,7 +405,17 @@ class PixiStaticSceneRenderer {
       }
 
       const dpr = app.renderer.resolution;
-      const pxPerSceneUnit = dpr * withCanvas.scale;
+      let record = this.elementSprites.get(element.id);
+      // The sprite displays record.withCanvas's texture (see the invariant on
+      // the record type), so the mapping must derive from THAT record's
+      // scale — never from a regenerated withCanvas whose swap is still
+      // rate-limit pending: the stale bitmap then just goes blurry with the
+      // stage zoom (same as mid-gesture) instead of flashing magnified by
+      // oldScale/newScale. Records drained from swapBacklog this frame were
+      // promoted before placement, so their texture and transform switch to
+      // the new mapping in the same rendered frame.
+      const pxPerSceneUnit =
+        dpr * (record ? record.withCanvas.scale : withCanvas.scale);
       const padding = getCanvasPadding(element);
       const [x1, y1, x2, y2] = getElementAbsoluteCoords(
         element,
@@ -351,23 +424,26 @@ class PixiStaticSceneRenderer {
       const cx = (x1 + x2) / 2;
       const cy = (y1 + y2) / 2;
 
-      let record = this.elementSprites.get(element.id);
       if (!record) {
         const texture = Texture.from(withCanvas.canvas);
         const sprite = new Sprite(texture);
-        record = { sprite, texture, withCanvas, mask: null };
+        record = {
+          sprite,
+          texture,
+          withCanvas,
+          pendingWithCanvas: null,
+          mask: null,
+        };
         this.elementSprites.set(element.id, record);
         // brand-new textures upload on first render — reveal gradually
         sprite.visible = false;
         this.revealBacklog.push(sprite);
       } else if (record.withCanvas !== withCanvas) {
         // cache entry regenerated (zoom bucket/theme/crop) → new offscreen
-        // canvas → swap texture in place (stays visible, no pop-in)
-        const texture = Texture.from(withCanvas.canvas);
-        record.texture.destroy(true);
-        record.texture = texture;
-        record.withCanvas = withCanvas;
-        record.sprite.texture = texture;
+        // canvas → texture swap needed; rate-limited at the start of the
+        // frame (stale texture + old mapping stay paired meanwhile)
+        record.pendingWithCanvas = withCanvas;
+        this.swapBacklog.add(record);
       }
 
       // match the Canvas2D path's imageSmoothing semantics: nearest when the
@@ -513,6 +589,7 @@ class PixiStaticSceneRenderer {
         record.sprite.destroy();
         record.mask?.destroy();
         this.elementSprites.delete(id);
+        this.swapBacklog.delete(record);
       }
     }
     for (const [id, record] of this.linkIconSprites) {
@@ -545,7 +622,11 @@ class PixiStaticSceneRenderer {
       }
       revealsLeft--;
     }
-    if (this.revealBacklog.length && this.continuationRaf === null) {
+
+    if (
+      (this.revealBacklog.length || this.swapBacklog.size) &&
+      this.continuationRaf === null
+    ) {
       const win = config.canvas.ownerDocument?.defaultView;
       if (win) {
         this.continuationRaf = win.requestAnimationFrame(() => {
@@ -556,6 +637,9 @@ class PixiStaticSceneRenderer {
         });
       }
     }
+
+    // on-demand compositing (autoStart: false) — one GPU pass per state change
+    app.render();
 
     return true;
   };
@@ -757,7 +841,13 @@ class PixiStaticSceneRenderer {
     if (!record) {
       const texture = Texture.from(uncroppedWithCanvas.canvas);
       const sprite = new Sprite(texture);
-      record = { sprite, texture, withCanvas: uncroppedWithCanvas, mask: null };
+      record = {
+        sprite,
+        texture,
+        withCanvas: uncroppedWithCanvas,
+        pendingWithCanvas: null,
+        mask: null,
+      };
       this.elementSprites.set(ghostId, record);
       sprite.visible = false;
       this.revealBacklog.push(sprite);
@@ -798,10 +888,29 @@ class PixiStaticSceneRenderer {
 
   private renderGrid(config: StaticSceneRenderConfig): void {
     const g = this.gridGraphics;
-    g.clear();
     const { appState, renderConfig } = config;
     const { renderGrid = true } = renderConfig;
     const gridSize = appState.gridSize;
+
+    // Graphics strokes have no dash support, so a redraw tessellates every
+    // dash segment — skip it entirely while the grid inputs are unchanged
+    const signature = [
+      renderGrid,
+      gridSize,
+      appState.gridStep,
+      appState.scrollX,
+      appState.scrollY,
+      appState.zoom.value,
+      appState.width,
+      appState.height,
+      renderConfig.theme,
+    ].join("|");
+    if (signature === this.lastGridSignature) {
+      return;
+    }
+    this.lastGridSignature = signature;
+
+    g.clear();
     if (!renderGrid || !gridSize) {
       return;
     }

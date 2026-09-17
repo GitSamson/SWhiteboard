@@ -29,7 +29,13 @@ export type JSONExportData = {
 };
 
 /**
- * Strips out files which are only referenced by deleted elements
+ * Strips out files which are only referenced by deleted elements.
+ *
+ * Exception: files referenced by deleted elements that carry
+ * `customData.linkedFile` are kept — hiding a linked file is a soft delete
+ * (the on-disk original stays), and the embedded (thumbnail) copy may be the
+ * only in-scene data left once the file is reopened without folder
+ * permission.
  */
 const filterOutDeletedFiles = (
   elements: readonly ExcalidrawElement[],
@@ -38,10 +44,10 @@ const filterOutDeletedFiles = (
   const nextFiles: BinaryFiles = {};
   for (const element of elements) {
     if (
-      !element.isDeleted &&
       "fileId" in element &&
       element.fileId &&
-      files[element.fileId]
+      files[element.fileId] &&
+      (!element.isDeleted || element.customData?.linkedFile)
     ) {
       nextFiles[element.fileId] = files[element.fileId];
     }

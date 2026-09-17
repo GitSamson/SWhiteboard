@@ -30,6 +30,24 @@ export const registerFolder = async (
   return { folderId, entry };
 };
 
+/**
+ * Overwrites the registry entry of an existing folderId with a (new) handle.
+ * Used when the persisted handle was lost (registry cleared) or the user
+ * re-picks the folder — the scene's `syncFolder.folderId` stays valid.
+ */
+export const upsertFolder = async (
+  folderId: string,
+  handle: FileSystemDirectoryHandle,
+): Promise<FolderRegistryEntry> => {
+  const entry: FolderRegistryEntry = {
+    handle,
+    rootName: handle.name,
+    lastUsedAt: Date.now(),
+  };
+  await set(folderId, entry, linkedAssetsStore);
+  return entry;
+};
+
 export const getFolderEntry = async (
   folderId: string,
 ): Promise<FolderRegistryEntry | undefined> => {

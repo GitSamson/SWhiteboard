@@ -779,6 +779,10 @@
     "orphanedKeep": "Keep images",
     "orphanedDelete": "Delete images",
     "syncFolderExpand": "Show files",
-    "syncFolderCollapse": "Hide files"
+    "syncFolderCollapse": "Hide files",
+    "reconnectBanner": "Folder \"{{name}}\" needs permission to reconnect",
+    "relinkBanner": "Folder \"{{name}}\" is not linked on this device",
+    "reconnectButton": "Reconnect",
+    "relinkButton": "Relink folder"
   }
 }

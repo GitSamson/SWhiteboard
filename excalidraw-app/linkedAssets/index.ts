@@ -12,9 +12,12 @@ import { setLinkedAssetsBridge } from "@excalidraw/excalidraw";
 import { setLinkedImageResolver } from "@excalidraw/excalidraw";
 import { setThumbnailResolver } from "@excalidraw/excalidraw";
 
+import { debounce } from "@excalidraw/common";
+
 import { isFrameElement, newFrameElement } from "@excalidraw/element";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import { appJotaiStore } from "../app-jotai";
 
@@ -31,6 +34,8 @@ import {
   createLinkedImageResolver,
   resolveOriginalsForExport,
 } from "./originals";
+import { refreshFolderConnectionStatuses } from "./connectionStatus";
+import { isWholesaleSceneReplacement } from "./sceneReplace";
 import {
   connectedFoldersAtom,
   deleteHiddenImagesTargetAtom,
@@ -63,6 +68,13 @@ const syncConnectedFoldersAtom = async (): Promise<void> => {
   }
   appJotaiStore.set(connectedFoldersAtom, folders);
 };
+
+/**
+ * Re-reads the folder registry into `connectedFoldersAtom`. Exported for
+ * the reconnect flows (relink registers a new handle under an existing
+ * folderId and needs the panel/banner metadata refreshed).
+ */
+export const refreshConnectedFoldersAtom = syncConnectedFoldersAtom;
 
 /**
  * Lets the user pick a folder, registers it, and creates a sync frame bound
@@ -214,6 +226,7 @@ export const initLinkedAssets = (
   });
 
   void syncConnectedFoldersAtom();
+  void refreshFolderConnectionStatuses(excalidrawAPI);
 
   const stopSyncEngine = startSyncEngine(excalidrawAPI);
 
@@ -229,15 +242,34 @@ export const initLinkedAssets = (
     setTimeout(() => void verifyLinkedAssets(excalidrawAPI), 1000);
   });
 
+  // re-verify when the whole scene is replaced (opening a .excalidraw file,
+  // dropping one onto the canvas): the library swaps the scene internally,
+  // so the replacement is detected from the scene change stream instead.
+  // Read-only: loading a scene must never write to disk.
+  let prevSceneElements: readonly ExcalidrawElement[] | null = null;
+  const scheduleSceneReloadVerify = debounce(() => {
+    void verifyLinkedAssets(excalidrawAPI);
+    void refreshFolderConnectionStatuses(excalidrawAPI);
+  }, 500);
+  const unsubscribeSceneReplace = excalidrawAPI.onChange((elements) => {
+    const replaced = isWholesaleSceneReplacement(prevSceneElements, elements);
+    prevSceneElements = elements;
+    if (replaced) {
+      scheduleSceneReloadVerify();
+    }
+  });
+
   // re-verify linked files whenever the window regains focus
   const onWindowFocus = () => {
     void verifyLinkedAssets(excalidrawAPI);
+    void refreshFolderConnectionStatuses(excalidrawAPI);
   };
   window.addEventListener("focus", onWindowFocus);
 
   return () => {
     window.removeEventListener("focus", onWindowFocus);
     unsubscribeInitialVerify();
+    unsubscribeSceneReplace();
     stopSyncEngine();
     unsubscribeMissingCount();
     setThumbnailResolver(null);

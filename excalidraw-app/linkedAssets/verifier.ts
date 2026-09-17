@@ -33,6 +33,7 @@ import type {
 
 import { blobToDataURL } from "./convert";
 import { isImportableAssetFile } from "./assetTypes";
+import { refreshFolderConnectionStatuses } from "./connectionStatus";
 import { importNewFilesIntoFrame } from "./importer";
 import { invalidateLinkedOriginal } from "./originals";
 import {
@@ -332,6 +333,9 @@ export const verifySyncFrame = async (
     await ensureFolderPermission(entry.handle);
   }
   await verifyFrame(excalidrawAPI, frame, syncFolder);
+  // the prompt above may have just re-established the connection (or the
+  // registry entry may be gone) — keep the UI-facing status in sync
+  await refreshFolderConnectionStatuses(excalidrawAPI);
 };
 
 /**
@@ -367,4 +371,8 @@ export const verifyLinkedAssets = async (
       console.error("linked assets verification failed", error);
     }
   }
+
+  // folders skipped for lack of permission (or missing handles) are
+  // reflected in the UI status so the user can reconnect
+  await refreshFolderConnectionStatuses(excalidrawAPI);
 };

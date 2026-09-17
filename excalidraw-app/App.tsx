@@ -107,6 +107,7 @@ import {
   isLinkedAssetsAvailable,
 } from "./linkedAssets";
 import { MissingLinkedBanner } from "./linkedAssets/ui/MissingLinkedBanner";
+import { ReconnectBanner } from "./linkedAssets/ui/ReconnectBanner";
 import { RenameLinkedImageDialog } from "./linkedAssets/ui/RenameLinkedImageDialog";
 import { DeleteHiddenImagesDialog } from "./linkedAssets/ui/DeleteHiddenImagesDialog";
 import { OrphanedFolderDialog } from "./linkedAssets/ui/OrphanedFolderDialog";
@@ -1119,6 +1120,7 @@ const ExcalidrawWrapper = () => {
           }
         />
         <MissingLinkedBanner />
+        <ReconnectBanner />
         <RenameLinkedImageDialog />
         <DeleteHiddenImagesDialog />
         <OrphanedFolderDialog />
