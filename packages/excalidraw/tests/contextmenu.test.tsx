@@ -7,6 +7,7 @@ import { setDateTimeForTests } from "@excalidraw/common";
 
 import { copiedStyles } from "../actions/actionStyles";
 import { Excalidraw } from "../index";
+import * as SceneExport from "../scene/export";
 import * as StaticScene from "../renderer/staticScene";
 
 import { API } from "./helpers/api";
@@ -123,6 +124,7 @@ describe("contextMenu element", () => {
       "copy",
       "paste",
       "wrapSelectionInFrame",
+      "exportHighestQualityPng",
       "copyStyles",
       "pasteStyles",
       "deleteSelectedElements",
@@ -212,11 +214,12 @@ describe("contextMenu element", () => {
     const contextMenu = UI.queryContextMenu();
     const contextMenuOptions =
       contextMenu?.querySelectorAll(".context-menu li");
-    const expectedShortcutNames: ShortcutName[] = [
+    const expectedShortcutNames: ActionName[] = [
       "cut",
       "copy",
       "paste",
       "wrapSelectionInFrame",
+      "exportHighestQualityPng",
       "copyStyles",
       "pasteStyles",
       "deleteSelectedElements",
@@ -274,6 +277,7 @@ describe("contextMenu element", () => {
       "copy",
       "paste",
       "wrapSelectionInFrame",
+      "exportHighestQualityPng",
       "copyStyles",
       "pasteStyles",
       "deleteSelectedElements",
@@ -658,6 +662,75 @@ describe("contextMenu element", () => {
     expect(clickSpy).toHaveBeenCalledTimes(1);
     // subsequent images are staggered to avoid browser throttling
     await waitFor(() => expect(clickSpy).toHaveBeenCalledTimes(2));
+    clickSpy.mockRestore();
+  });
+
+  it("exports selection as high-quality PNG via context menu item", async () => {
+    const image = API.createElement({
+      type: "image",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      fileId: "fileId1" as any,
+    });
+    Object.assign(image, {
+      customData: { linkedFile: { width: 400, height: 400 } },
+    });
+    const rectangle = API.createElement({
+      type: "rectangle",
+      x: 200,
+      y: 0,
+      width: 100,
+      height: 100,
+    });
+    API.setElements([image, rectangle]);
+    API.setSelectedElements([image, rectangle]);
+
+    h.app.files["fileId1" as any] = {
+      mimeType: "image/png",
+      id: "fileId1",
+      dataURL: "data:image/png;base64,iVBORw0KGgo=",
+      created: Date.now(),
+      lastRetrieved: Date.now(),
+    } as any;
+
+    fireEvent.contextMenu(GlobalTestState.interactiveCanvas, {
+      button: 2,
+      clientX: 50,
+      clientY: 50,
+    });
+
+    const contextMenu = UI.queryContextMenu();
+    expect(contextMenu).not.toBeNull();
+    const menuItem = contextMenu?.querySelector(
+      'li[data-testid="exportHighestQualityPng"]',
+    );
+    expect(menuItem).not.toBeNull();
+
+    const fakeCanvas = {
+      toBlob: (callback: (blob: Blob | null) => void) => callback(new Blob()),
+    } as unknown as HTMLCanvasElement;
+    const exportSpy = vi
+      .spyOn(SceneExport, "exportToCanvas")
+      .mockResolvedValue(fakeCanvas);
+    const createObjectURLSpy = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:mock-url" as unknown as string);
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+
+    fireEvent.click(menuItem!);
+
+    // the linked original is 400px wide on a 100px-wide element → 4x scale
+    await waitFor(() => expect(clickSpy).toHaveBeenCalledTimes(1));
+    expect(exportSpy).toHaveBeenCalledTimes(1);
+    expect(exportSpy.mock.calls[0][1].exportScale).toBe(4);
+    expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
+
+    exportSpy.mockRestore();
+    createObjectURLSpy.mockRestore();
     clickSpy.mockRestore();
   });
 

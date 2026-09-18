@@ -14,6 +14,8 @@ import { setThumbnailResolver } from "@excalidraw/excalidraw";
 
 import { debounce } from "@excalidraw/common";
 
+import throttle from "lodash.throttle";
+
 import { isFrameElement, newFrameElement } from "@excalidraw/element";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
@@ -215,15 +217,17 @@ export const initLinkedAssets = (
   // plain cache fills are served by the thumbnail resolver above)
   setLinkedImageResolver(createLinkedImageResolver(excalidrawAPI));
 
-  // keep the missing-linked counter atom in sync for the banner UI
-  const unsubscribeMissingCount = excalidrawAPI.onChange((elements) => {
+  // keep the missing-linked counter atom in sync for the banner UI. Runs in
+  // the throttled scene-replace check below — counting is O(N) over all
+  // elements, so it must not run on every scene change.
+  const updateMissingCount = (elements: readonly ExcalidrawElement[]) => {
     const count = elements.filter(
       (el) => !el.isDeleted && el.customData?.linkedFile?.status === "missing",
     ).length;
     if (appJotaiStore.get(missingLinkedCountAtom) !== count) {
       appJotaiStore.set(missingLinkedCountAtom, count);
     }
-  });
+  };
 
   void syncConnectedFoldersAtom();
   void refreshFolderConnectionStatuses(excalidrawAPI);
@@ -246,17 +250,33 @@ export const initLinkedAssets = (
   // dropping one onto the canvas): the library swaps the scene internally,
   // so the replacement is detected from the scene change stream instead.
   // Read-only: loading a scene must never write to disk.
-  let prevSceneElements: readonly ExcalidrawElement[] | null = null;
+  //
+  // The detector is O(N) per run (it builds an id→element Map of the whole
+  // scene), so it is rate-limited to ~1/s — wholesale replacement is a
+  // low-frequency event and a ≤1s detection delay is imperceptible. Routine
+  // edits (which fire onChange on every gesture frame) only record the
+  // latest elements between runs.
+  let latestElements: readonly ExcalidrawElement[] | null = null;
+  let baselineElements: readonly ExcalidrawElement[] | null = null;
   const scheduleSceneReloadVerify = debounce(() => {
     void verifyLinkedAssets(excalidrawAPI);
     void refreshFolderConnectionStatuses(excalidrawAPI);
   }, 500);
-  const unsubscribeSceneReplace = excalidrawAPI.onChange((elements) => {
-    const replaced = isWholesaleSceneReplacement(prevSceneElements, elements);
-    prevSceneElements = elements;
+  const runSceneReplaceCheck = throttle(() => {
+    const elements = latestElements;
+    if (!elements) {
+      return;
+    }
+    updateMissingCount(elements);
+    const replaced = isWholesaleSceneReplacement(baselineElements, elements);
+    baselineElements = elements;
     if (replaced) {
       scheduleSceneReloadVerify();
     }
+  }, 1000);
+  const unsubscribeSceneReplace = excalidrawAPI.onChange((elements) => {
+    latestElements = elements;
+    runSceneReplaceCheck();
   });
 
   // re-verify linked files whenever the window regains focus
@@ -270,8 +290,9 @@ export const initLinkedAssets = (
     window.removeEventListener("focus", onWindowFocus);
     unsubscribeInitialVerify();
     unsubscribeSceneReplace();
+    runSceneReplaceCheck.cancel();
+    scheduleSceneReloadVerify.cancel();
     stopSyncEngine();
-    unsubscribeMissingCount();
     setThumbnailResolver(null);
     setLinkedImageResolver(null);
     clearLinkedOriginalCache();

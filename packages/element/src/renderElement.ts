@@ -549,11 +549,18 @@ export const elementWithCanvasCache = new WeakMap<
   ExcalidrawElementWithCanvas
 >();
 
+/** zoom cache buckets: canvases rasterized within one bucket (~±6% zoom)
+ *  stay valid without regeneration */
+const ZOOM_CACHE_BUCKET_RATIO = 1.12;
+export const zoomCacheBucket = (zoom: number) =>
+  Math.round(Math.log(zoom) / Math.log(ZOOM_CACHE_BUCKET_RATIO));
+
 export const generateElementWithCanvas = (
   element: NonDeletedExcalidrawElement,
   elementsMap: NonDeletedSceneElementsMap,
   renderConfig: StaticCanvasRenderConfig,
   appState: StaticCanvasAppState | InteractiveCanvasAppState,
+  generationBudget?: { remaining: number },
 ) => {
   const zoom: Zoom = renderConfig
     ? appState.zoom
@@ -563,12 +570,26 @@ export const generateElementWithCanvas = (
   const prevElementWithCanvas = elementWithCanvasCache.get(element);
   const shouldRegenerateBecauseZoom =
     prevElementWithCanvas &&
-    prevElementWithCanvas.zoomValue !== zoom.value &&
+    (renderConfig?.allowZoomCacheBucketing
+      ? zoomCacheBucket(prevElementWithCanvas.zoomValue) !==
+        zoomCacheBucket(zoom.value)
+      : prevElementWithCanvas.zoomValue !== zoom.value) &&
     !appState?.shouldCacheIgnoreZoom;
   const imageCrop = isImageElement(element) ? element.crop : null;
 
   const containingFrameOpacity =
     getContainingFrame(element, elementsMap)?.opacity || 100;
+
+  // zoom-triggered regeneration is deferrable: with an exhausted budget the
+  // previous canvas keeps being used (callers derive the transform from the
+  // record itself, so the slightly-scaled bitmap stays consistent)
+  if (
+    shouldRegenerateBecauseZoom &&
+    generationBudget &&
+    generationBudget.remaining <= 0
+  ) {
+    return prevElementWithCanvas;
+  }
 
   if (
     !prevElementWithCanvas ||
@@ -577,6 +598,9 @@ export const generateElementWithCanvas = (
     prevElementWithCanvas.imageCrop !== imageCrop ||
     prevElementWithCanvas.containingFrameOpacity !== containingFrameOpacity
   ) {
+    if (generationBudget) {
+      generationBudget.remaining--;
+    }
     const elementWithCanvas = generateElementCanvas(
       element,
       elementsMap,

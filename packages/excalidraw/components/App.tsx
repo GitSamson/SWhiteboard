@@ -326,6 +326,7 @@ import {
   actionToggleMidpointSnapping,
   actionToggleCropEditor,
   actionDownloadOriginalImage,
+  actionExportHighestQualityPng,
   actionConvertToLinked,
   actionConvertToEmbedded,
   actionRenameLinkedImage,
@@ -4214,8 +4215,13 @@ class App extends React.Component<AppProps, AppState> {
         this.state.scrollY,
         this.state.zoom,
       );
-      // zooming/panning may make thumbnail-cached images visibly blurry —
-      // schedule upgrades of the now-large visible ones to their originals
+    }
+
+    // zooming may make thumbnail-cached images visibly blurry — schedule
+    // upgrades of the now-large visible ones to their originals. Panning
+    // does not change on-screen size, so it must not trigger this (the
+    // original-decode burst is expensive).
+    if (prevState.zoom.value !== this.state.zoom.value) {
       this.scheduleImageQualitySync();
     }
 
@@ -12989,8 +12995,9 @@ class App extends React.Component<AppProps, AppState> {
       }
       toUpgrade.push(element);
       // cap the batch so a zoom-into-a-huge-board doesn't burst-decode
-      // hundreds of originals at once; the next throttled run picks up more
-      if (toUpgrade.length >= 20) {
+      // hundreds of originals at once; the next throttled run picks up more.
+      // Kept small: each upgrade is a disk read + base64 + full decode
+      if (toUpgrade.length >= 8) {
         break;
       }
     }
@@ -13867,6 +13874,7 @@ class App extends React.Component<AppProps, AppState> {
       CONTEXT_MENU_SEPARATOR,
       actionToggleCropEditor,
       actionDownloadOriginalImage,
+      actionExportHighestQualityPng,
       actionConvertToLinked,
       actionConvertToEmbedded,
       actionRenameLinkedImage,

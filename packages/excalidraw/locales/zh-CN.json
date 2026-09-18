@@ -205,7 +205,8 @@
     "deleteHiddenImages": "删除隐藏的图片",
     "resetSyncFrameLayout": "重置布局",
     "refreshSyncFrame": "刷新检查",
-    "linkedImageFolder": "链接文件夹"
+    "linkedImageFolder": "链接文件夹",
+    "exportHighestQualityPng": "导出最高清 PNG（原图级）"
   },
   "elementLink": {
     "title": "链接到对象",

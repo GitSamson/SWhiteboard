@@ -205,7 +205,8 @@
     "deleteHiddenImages": "Delete hidden images",
     "resetSyncFrameLayout": "Reset layout",
     "refreshSyncFrame": "Refresh from folder",
-    "linkedImageFolder": "Linked folder"
+    "linkedImageFolder": "Linked folder",
+    "exportHighestQualityPng": "Export as high-quality PNG"
   },
   "elementLink": {
     "title": "Link to object",

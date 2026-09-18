@@ -13,7 +13,15 @@
  * Export paths never come through here.
  */
 
-import { Application, Container, Graphics, Sprite, Texture } from "pixi.js";
+import {
+  Application,
+  Container,
+  Graphics,
+  Rectangle,
+  Sprite,
+  Texture,
+  TilingSprite,
+} from "pixi.js";
 
 import {
   applyDarkModeFilter,
@@ -75,7 +83,11 @@ const MAX_TEXTURE_REVEALS_PER_FRAME = 8;
  *  seconds, so swaps are spread over frames (stale texture shows meanwhile) */
 const MAX_TEXTURE_SWAPS_PER_FRAME = 16;
 
-const Z_GRID = -1;
+/** max offscreen-canvas (re)rasterizations per frame; when zoom settles into
+ *  a new cache bucket every visible element canvas would otherwise regenerate
+ *  in a single frame — the budget defers the rest to continuation frames */
+const MAX_CANVAS_GENERATIONS_PER_FRAME = 8;
+
 const Z_LINK_ICON_OFFSET = 0.5;
 
 type ElementSpriteRecord = {
@@ -114,7 +126,11 @@ class PixiStaticSceneRenderer {
 
   /** scene-space root: applies scroll + zoom */
   private root = new Container();
+  /** scratch Graphics for baking the grid tile texture — never on stage */
   private gridGraphics = new Graphics();
+  /** screen-space grid: one tile texture repeated over the viewport */
+  private gridTile: TilingSprite | null = null;
+  private gridTileTexture: Texture | null = null;
 
   private elementSprites = new Map<string, ElementSpriteRecord>();
   private linkIconSprites = new Map<string, LinkIconRecord>();
@@ -131,7 +147,8 @@ class PixiStaticSceneRenderer {
   /** last canvas size / resolution passed to renderer.resize() */
   private lastResize = { width: -1, height: -1, resolution: -1 };
 
-  /** last-rendered grid parameters; redraw skipped while unchanged */
+  /** last-baked grid tile parameters; texture regen skipped while unchanged
+   *  (scroll/size are NOT part of it — panning only shifts tilePosition) */
   private lastGridSignature = "";
 
   private removeContextLostListener: (() => void) | null = null;
@@ -185,9 +202,18 @@ class PixiStaticSceneRenderer {
           }
           this.app = app;
           this.root.sortableChildren = true;
-          this.gridGraphics.zIndex = Z_GRID;
-          this.root.addChild(this.gridGraphics);
           app.stage.addChild(this.root);
+
+          // grid lives in screen space (stage child, below the scene root)
+          // as a repeated tile texture — panning shifts tilePosition instead
+          // of re-tessellating dashes
+          this.gridTile = new TilingSprite({
+            texture: Texture.EMPTY,
+            width: 0,
+            height: 0,
+            visible: false,
+          });
+          app.stage.addChildAt(this.gridTile, 0);
 
           const onLost = (event: Event) => {
             event.preventDefault();
@@ -235,6 +261,11 @@ class PixiStaticSceneRenderer {
     this.linkIconSprites.clear();
     this.frameGroups.clear();
     this.frameOutlines.clear();
+    this.gridTile?.destroy();
+    this.gridTile = null;
+    this.gridTileTexture?.destroy(true);
+    this.gridTileTexture = null;
+    this.gridGraphics.destroy();
     if (this.app) {
       // canvas is owned by React (StaticCanvas) — don't remove it from DOM
       this.app.destroy();
@@ -364,6 +395,22 @@ class PixiStaticSceneRenderer {
 
     let orderIndex = 0;
 
+    // caps offscreen-canvas rasterizations this frame (zoom-bucket crossings
+    // are deferred past the budget — generateElementWithCanvas keeps the old
+    // canvas; an exhausted budget also schedules a continuation frame below)
+    const generationBudget = {
+      remaining: MAX_CANVAS_GENERATIONS_PER_FRAME,
+    };
+
+    // renderConfig is shared with the Canvas2D static path (same props
+    // object), so the bucketing flag must not be set on it in place — a
+    // shallow copy opts the rasterization calls into zoom-bucket reuse
+    // without affecting the other paths (export stays exact)
+    const bucketingRenderConfig = {
+      ...renderConfig,
+      allowZoomCacheBucketing: true,
+    };
+
     const placeElement = (
       element: NonDeletedExcalidrawElement,
       zPass: number,
@@ -397,8 +444,9 @@ class PixiStaticSceneRenderer {
       const withCanvas = generateElementWithCanvas(
         element,
         allElementsMap,
-        renderConfig,
+        bucketingRenderConfig,
         appState,
+        generationBudget,
       );
       if (!withCanvas) {
         return;
@@ -624,7 +672,12 @@ class PixiStaticSceneRenderer {
     }
 
     if (
-      (this.revealBacklog.length || this.swapBacklog.size) &&
+      (this.revealBacklog.length ||
+        this.swapBacklog.size ||
+        // budget exhausted: elements whose zoom-triggered regeneration was
+        // deferred still render stale this frame — keep the chain alive so
+        // they regenerate on the next one
+        generationBudget.remaining === 0) &&
       this.continuationRaf === null
     ) {
       const win = config.canvas.ownerDocument?.defaultView;
@@ -887,122 +940,168 @@ class PixiStaticSceneRenderer {
   }
 
   private renderGrid(config: StaticSceneRenderConfig): void {
-    const g = this.gridGraphics;
+    const tile = this.gridTile;
+    if (!tile) {
+      return;
+    }
     const { appState, renderConfig } = config;
     const { renderGrid = true } = renderConfig;
     const gridSize = appState.gridSize;
 
-    // Graphics strokes have no dash support, so a redraw tessellates every
-    // dash segment — skip it entirely while the grid inputs are unchanged
+    if (!renderGrid || !gridSize) {
+      tile.visible = false;
+      return;
+    }
+
+    const zoom = appState.zoom.value;
+    const gridStepEff = appState.gridStep > 1 ? appState.gridStep : 1;
+    const actualGridSize = gridSize * zoom;
+    // one tile spans one bold-line period in screen space
+    const tileW = Math.max(1, Math.round(gridStepEff * actualGridSize));
+    const tileH = tileW;
+
+    // Texture regen only when the baked pattern inputs change — scroll and
+    // viewport size are applied per frame via tilePosition/width/height, so
+    // panning no longer re-tessellates dashes. `scale` (resolution) is
+    // included because the bake happens at renderer resolution.
     const signature = [
       renderGrid,
       gridSize,
       appState.gridStep,
-      appState.scrollX,
-      appState.scrollY,
-      appState.zoom.value,
-      appState.width,
-      appState.height,
+      zoom,
       renderConfig.theme,
+      tileW,
+      tileH,
+      config.scale,
     ].join("|");
-    if (signature === this.lastGridSignature) {
+    if (signature !== this.lastGridSignature) {
+      this.lastGridSignature = signature;
+      this.rebuildGridTile(
+        tileW,
+        tileH,
+        actualGridSize,
+        gridStepEff,
+        zoom,
+        renderConfig.theme,
+      );
+    }
+
+    tile.visible = true;
+    tile.position.set(0, 0);
+    tile.width = appState.width;
+    tile.height = appState.height;
+    // bold lines sit at screen x ≡ 2*scrollX*zoom (mod tile); the tiling
+    // shader samples the texture at (local - tilePosition), so anchoring the
+    // pattern at tilePosition keeps that alignment for any scroll
+    const mod = (v: number, m: number) => ((v % m) + m) % m;
+    tile.tilePosition.set(
+      mod(2 * appState.scrollX * zoom, tileW),
+      mod(2 * appState.scrollY * zoom, tileH),
+    );
+  }
+
+  /** bakes one grid period into a tile texture via generateTexture; lines on
+   *  the tile boundary are drawn at 0 AND at the tile extent so the two
+   *  clipped halves join into a full-width line when the tile repeats */
+  private rebuildGridTile(
+    tileW: number,
+    tileH: number,
+    actualGridSize: number,
+    gridStepEff: number,
+    zoom: number,
+    theme: keyof typeof GridLineColor,
+  ): void {
+    const app = this.app;
+    const tile = this.gridTile;
+    if (!app || !tile) {
       return;
     }
-    this.lastGridSignature = signature;
-
+    const g = this.gridGraphics;
     g.clear();
-    if (!renderGrid || !gridSize) {
-      return;
-    }
 
-    const zoom = appState.zoom;
-    const { scrollX, scrollY, gridStep } = appState;
-    const width = appState.width / zoom.value;
-    const height = appState.height / zoom.value;
+    const regularColor = GridLineColor[theme].regular;
+    const boldColor = GridLineColor[theme].bold;
+    const regularWidth = Math.min(1, zoom);
+    const boldWidth = Math.min(1, 4 * zoom);
+    // dash period per axis, snapped to divide the tile so the repeat is
+    // seamless (≈6 css px like the Canvas2D path)
+    const periodX = tileW / Math.max(1, Math.round(tileW / 6));
+    const periodY = tileH / Math.max(1, Math.round(tileH / 6));
 
-    const offsetX = (scrollX % gridSize) - gridSize;
-    const offsetY = (scrollY % gridSize) - gridSize;
-    const actualGridSize = gridSize * zoom.value;
-    const spaceWidth = 1 / zoom.value;
-
-    const theme = renderConfig.theme;
-
-    // manual dash segments — Pixi strokes have no dash support. All lines
-    // of one style are batched into a single stroke call.
-    const drawLine = (
+    // dashed segments with an on/off of period/2, starting "on" at 0
+    const dashSegments = (
       x1: number,
       y1: number,
-      x2: number,
-      y2: number,
-      lineWidth: number,
-      dashed: boolean,
+      horizontal: boolean,
+      length: number,
+      period: number,
     ) => {
-      if (!dashed) {
-        g.moveTo(x1, y1).lineTo(x2, y2);
-        return;
-      }
-      const dashOn = lineWidth * 3;
-      const dashOff = spaceWidth + (lineWidth + spaceWidth);
-      const horizontal = y1 === y2;
-      const length = horizontal ? Math.abs(x2 - x1) : Math.abs(y2 - y1);
       let cursor = 0;
       while (cursor < length) {
-        const segEnd = Math.min(cursor + dashOn, length);
+        const segEnd = Math.min(cursor + period / 2, length);
         if (horizontal) {
           g.moveTo(x1 + cursor, y1).lineTo(x1 + segEnd, y1);
         } else {
           g.moveTo(x1, y1 + cursor).lineTo(x1, y1 + segEnd);
         }
-        cursor = segEnd + dashOff;
+        cursor = segEnd + period / 2;
       }
     };
 
-    const strokeBatch = (lines: Array<readonly number[]>, bold: boolean) => {
-      if (!lines.length) {
+    const drawRegular = () => {
+      if (actualGridSize < 10) {
+        return; // matches Canvas2D: dense zoom hides the thin lines
+      }
+      const positions: number[] = [];
+      if (gridStepEff === 1) {
+        positions.push(0);
+      } else {
+        for (let k = 1; k < gridStepEff; k++) {
+          positions.push(Math.round(k * actualGridSize));
+        }
+      }
+      if (!positions.length) {
         return;
       }
-      const lineWidth = Math.min(1 / zoom.value, bold ? 4 : 1);
-      for (const [x1, y1, x2, y2] of lines) {
-        drawLine(x1, y1, x2, y2, lineWidth, !bold);
+      for (const x of positions) {
+        dashSegments(x, 0, false, tileH, periodY);
+        if (x === 0) {
+          dashSegments(tileW, 0, false, tileH, periodY);
+        }
       }
-      g.stroke({
-        width: lineWidth,
-        color: bold ? GridLineColor[theme].bold : GridLineColor[theme].regular,
-      });
+      for (const y of positions) {
+        dashSegments(0, y, true, tileW, periodX);
+        if (y === 0) {
+          dashSegments(0, tileH, true, tileW, periodX);
+        }
+      }
+      g.stroke({ width: regularWidth, color: regularColor });
     };
 
-    const regular: Array<readonly number[]> = [];
-    const bold: Array<readonly number[]> = [];
-
-    for (let x = offsetX; x < offsetX + width + gridSize * 2; x += gridSize) {
-      const isBold =
-        gridStep > 1 && Math.round(x - scrollX) % (gridStep * gridSize) === 0;
-      if (!isBold && actualGridSize < 10) {
-        continue;
+    const drawBold = () => {
+      if (gridStepEff === 1) {
+        return;
       }
-      (isBold ? bold : regular).push([
-        x,
-        offsetY - gridSize,
-        x,
-        Math.ceil(offsetY + height + gridSize * 2),
-      ] as const);
-    }
-    for (let y = offsetY; y < offsetY + height + gridSize * 2; y += gridSize) {
-      const isBold =
-        gridStep > 1 && Math.round(y - scrollY) % (gridStep * gridSize) === 0;
-      if (!isBold && actualGridSize < 10) {
-        continue;
-      }
-      (isBold ? bold : regular).push([
-        offsetX - gridSize,
-        y,
-        Math.ceil(offsetX + width + gridSize * 2),
-        y,
-      ] as const);
-    }
+      g.moveTo(0, 0).lineTo(0, tileH);
+      g.moveTo(tileW, 0).lineTo(tileW, tileH);
+      g.moveTo(0, 0).lineTo(tileW, 0);
+      g.moveTo(0, tileH).lineTo(tileW, tileH);
+      g.stroke({ width: boldWidth, color: boldColor });
+    };
 
-    strokeBatch(regular, false);
-    strokeBatch(bold, true);
+    drawRegular();
+    drawBold();
+
+    const texture = app.renderer.generateTexture({
+      target: g,
+      frame: new Rectangle(0, 0, tileW, tileH),
+      resolution: app.renderer.resolution,
+      antialias: true,
+      textureSourceOptions: { scaleMode: "nearest" },
+    });
+    this.gridTileTexture?.destroy(true);
+    this.gridTileTexture = texture;
+    tile.texture = texture;
   }
 
   private maybeRenderLinkIcon(

@@ -36,6 +36,10 @@ export type StaticCanvasRenderConfig = {
   /** when exporting the behavior is slightly different (e.g. we can't use
    CSS filters), and we disable render optimizations for best output */
   isExporting: boolean;
+  /** allow visible-render paths to reuse offscreen canvases across ~12% zoom
+   *  buckets, trading slight sharpness for far fewer rasterizations — do NOT
+   *  enable for export/precision paths */
+  allowZoomCacheBucketing?: boolean;
   embedsValidationStatus: EmbedsValidationStatus;
   elementsPendingErasure: ElementsPendingErasure;
   pendingFlowchartNodes: PendingExcalidrawElements | null;

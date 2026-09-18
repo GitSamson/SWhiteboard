@@ -1172,6 +1172,8 @@ export type AppClassProperties = {
 
   setAppState: App["setAppState"];
 
+  setToast: App["setToast"];
+
   isInteractionEnabled: App["isInteractionEnabled"];
   isNavigationEnabled: App["isNavigationEnabled"];
 };
