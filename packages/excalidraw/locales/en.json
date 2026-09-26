@@ -206,7 +206,9 @@
     "resetSyncFrameLayout": "Reset layout",
     "refreshSyncFrame": "Refresh from folder",
     "linkedImageFolder": "Linked folder",
-    "exportHighestQualityPng": "Export as high-quality PNG"
+    "exportHighestQualityPng": "Export as high-quality PNG",
+    "exportPdf": "Export as PDF (original images)",
+    "linkedOriginalsUnavailable": "{{count}} linked image(s) unavailable (folder not authorized), exported as thumbnails"
   },
   "elementLink": {
     "title": "Link to object",

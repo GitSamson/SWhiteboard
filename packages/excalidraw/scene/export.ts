@@ -188,11 +188,18 @@ export const exportToCanvas = async (
     exportPadding = DEFAULT_EXPORT_PADDING,
     viewBackgroundColor,
     exportingFrame,
+    forceOriginalImages = false,
   }: {
     exportBackground: boolean;
     exportPadding?: number;
     viewBackgroundColor: string;
     exportingFrame?: NonDeleted<ExcalidrawFrameLikeElement> | null;
+    /**
+     * decode full-resolution sources (linked originals / embedded dataURLs)
+     * instead of tiered thumbnails — used by the "original quality" export
+     * actions where anything less than the original would be visible
+     */
+    forceOriginalImages?: boolean;
   },
   createCanvas: (
     width: number,
@@ -246,6 +253,7 @@ export const exportToCanvas = async (
       (element) => element.fileId,
     ),
     files,
+    forceOriginal: forceOriginalImages,
   });
 
   renderStaticScene({

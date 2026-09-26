@@ -141,6 +141,7 @@ export type ActionName =
   | "cropEditor"
   | "downloadOriginalImage"
   | "exportHighestQualityPng"
+  | "exportPdf"
   | "convertToLinked"
   | "convertToEmbedded"
   | "renameLinkedImage"

@@ -39,6 +39,15 @@ export interface LinkedAssetsBridge {
    * originals (in-memory only, for PNG/SVG export)
    */
   resolveOriginalsForExport: (files: BinaryFiles) => Promise<BinaryFiles>;
+  /**
+   * how many of the given fileIds are linked images whose originals can't
+   * currently be read (folder handle missing or permission not granted).
+   * Read-only — never prompts. Used to warn before an export silently falls
+   * back to thumbnails.
+   */
+  getUnavailableLinkedOriginalCount?: (
+    fileIds: readonly FileId[],
+  ) => Promise<number>;
   /** opens the rename flow for a linked image */
   renameImage: (element: ExcalidrawImageElement) => void;
   /** converts embedded images to linked files in the bound folder */

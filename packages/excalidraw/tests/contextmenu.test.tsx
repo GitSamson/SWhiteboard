@@ -1,6 +1,8 @@
 import React from "react";
 import { vi } from "vitest";
 
+import { PDFDocument } from "pdf-lib";
+
 import { KEYS, STROKE_WIDTH, reseed } from "@excalidraw/common";
 
 import { setDateTimeForTests } from "@excalidraw/common";
@@ -125,6 +127,7 @@ describe("contextMenu element", () => {
       "paste",
       "wrapSelectionInFrame",
       "exportHighestQualityPng",
+      "exportPdf",
       "copyStyles",
       "pasteStyles",
       "deleteSelectedElements",
@@ -220,6 +223,7 @@ describe("contextMenu element", () => {
       "paste",
       "wrapSelectionInFrame",
       "exportHighestQualityPng",
+      "exportPdf",
       "copyStyles",
       "pasteStyles",
       "deleteSelectedElements",
@@ -278,6 +282,7 @@ describe("contextMenu element", () => {
       "paste",
       "wrapSelectionInFrame",
       "exportHighestQualityPng",
+      "exportPdf",
       "copyStyles",
       "pasteStyles",
       "deleteSelectedElements",
@@ -727,7 +732,106 @@ describe("contextMenu element", () => {
     await waitFor(() => expect(clickSpy).toHaveBeenCalledTimes(1));
     expect(exportSpy).toHaveBeenCalledTimes(1);
     expect(exportSpy.mock.calls[0][1].exportScale).toBe(4);
+    // original-resolution sources, never tiered thumbnails
+    expect(exportSpy.mock.calls[0][3].forceOriginalImages).toBe(true);
     expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
+
+    exportSpy.mockRestore();
+    createObjectURLSpy.mockRestore();
+    clickSpy.mockRestore();
+  });
+
+  it("exports selection as PDF with original images via context menu item", async () => {
+    // placed away from the origin on purpose: the page size must derive from
+    // the selection extents, not the absolute maxima (regression: far-from-
+    // origin selections exported as distorted strips)
+    const image = API.createElement({
+      type: "image",
+      x: 100,
+      y: 0,
+      width: 100,
+      height: 100,
+      fileId: "fileId1" as any,
+    });
+    Object.assign(image, {
+      customData: { linkedFile: { width: 400, height: 400 } },
+    });
+    const rectangle = API.createElement({
+      type: "rectangle",
+      x: 300,
+      y: 0,
+      width: 100,
+      height: 100,
+    });
+    API.setElements([image, rectangle]);
+    API.setSelectedElements([image, rectangle]);
+
+    h.app.files["fileId1" as any] = {
+      mimeType: "image/png",
+      id: "fileId1",
+      dataURL: "data:image/png;base64,iVBORw0KGgo=",
+      created: Date.now(),
+      lastRetrieved: Date.now(),
+    } as any;
+
+    fireEvent.contextMenu(GlobalTestState.interactiveCanvas, {
+      button: 2,
+      clientX: 150,
+      clientY: 50,
+    });
+
+    const contextMenu = UI.queryContextMenu();
+    expect(contextMenu).not.toBeNull();
+    const menuItem = contextMenu?.querySelector('li[data-testid="exportPdf"]');
+    expect(menuItem).not.toBeNull();
+
+    // a real 1×1 PNG so pdf-lib embeds it for real
+    const pngBytes = Uint8Array.from(
+      atob(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      ),
+      (char) => char.charCodeAt(0),
+    );
+    const fakeCanvas = {
+      toBlob: (callback: (blob: Blob | null) => void) =>
+        callback(
+          new Blob([pngBytes.buffer as ArrayBuffer], { type: "image/png" }),
+        ),
+    } as unknown as HTMLCanvasElement;
+    const exportSpy = vi
+      .spyOn(SceneExport, "exportToCanvas")
+      .mockResolvedValue(fakeCanvas);
+    const createObjectURLSpy = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:mock-url" as unknown as string);
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+
+    fireEvent.click(menuItem!);
+
+    await waitFor(() => expect(clickSpy).toHaveBeenCalledTimes(1));
+    expect(exportSpy).toHaveBeenCalledTimes(1);
+    expect(exportSpy.mock.calls[0][1].exportScale).toBe(4);
+    expect(exportSpy.mock.calls[0][3].forceOriginalImages).toBe(true);
+    const anchor = clickSpy.mock.instances[0] as unknown as HTMLAnchorElement;
+    expect(anchor.download).toMatch(/-高清\.pdf$/);
+    const pdfBlob = createObjectURLSpy.mock.calls[0][0] as Blob;
+    expect(pdfBlob.type).toBe("application/pdf");
+
+    // selection extents 300×100 (+10px padding each side) → 320×120 css px
+    // → ×0.75 = 240×90 pt page; absolute maxima would give 982.5×457.5
+    const pdfBytes = await new Promise<Uint8Array>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () =>
+        resolve(new Uint8Array(reader.result as ArrayBuffer));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(pdfBlob);
+    });
+    const doc = await PDFDocument.load(pdfBytes);
+    const page = doc.getPage(0);
+    expect(page.getWidth()).toBe(240);
+    expect(page.getHeight()).toBe(90);
 
     exportSpy.mockRestore();
     createObjectURLSpy.mockRestore();

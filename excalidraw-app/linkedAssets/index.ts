@@ -36,7 +36,10 @@ import {
   createLinkedImageResolver,
   resolveOriginalsForExport,
 } from "./originals";
-import { refreshFolderConnectionStatuses } from "./connectionStatus";
+import {
+  getUnavailableLinkedOriginalCount,
+  refreshFolderConnectionStatuses,
+} from "./connectionStatus";
 import { isWholesaleSceneReplacement } from "./sceneReplace";
 import {
   connectedFoldersAtom,
@@ -192,6 +195,8 @@ export const initLinkedAssets = (
     resolveOriginal: createLinkedImageResolver(excalidrawAPI),
     resolveOriginalsForExport: (files) =>
       resolveOriginalsForExport(excalidrawAPI, files),
+    getUnavailableLinkedOriginalCount: (fileIds) =>
+      getUnavailableLinkedOriginalCount(excalidrawAPI, fileIds),
     // rename flow: opens the app-layer rename dialog
     renameImage: (element) => {
       appJotaiStore.set(renameImageTargetAtom, element.id);

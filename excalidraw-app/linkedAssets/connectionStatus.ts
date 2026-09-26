@@ -10,6 +10,10 @@
  * automatically).
  */
 
+import { isImageElement } from "@excalidraw/element";
+
+import type { FileId } from "@excalidraw/element/types";
+
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 import { appJotaiStore } from "../app-jotai";
@@ -19,6 +23,7 @@ import { folderConnectionStatusAtom, isLinkedAssetsAvailable } from "./state";
 
 import type { FolderConnectionStatus } from "./state";
 import type { SyncFolderMeta } from "./types";
+import type { LinkedFileMeta } from "./types";
 
 export const getFolderConnectionStatus = async (
   folderId: string,
@@ -61,4 +66,52 @@ export const refreshFolderConnectionStatuses = async (
     }
   }
   appJotaiStore.set(folderConnectionStatusAtom, statuses);
+};
+
+/**
+ * Counts how many of the given fileIds belong to linked images whose
+ * originals can't currently be read — the folder handle is missing from the
+ * registry or its permission isn't granted. Read-only (queries, never
+ * prompts). Used to warn before an export silently falls back to thumbnails.
+ */
+export const getUnavailableLinkedOriginalCount = async (
+  excalidrawAPI: ExcalidrawImperativeAPI,
+  fileIds: readonly FileId[],
+): Promise<number> => {
+  if (!isLinkedAssetsAvailable() || !fileIds.length) {
+    return 0;
+  }
+  const folderIdByFileId = new Map<string, string>();
+  for (const element of excalidrawAPI.getSceneElementsIncludingDeleted()) {
+    if (
+      isImageElement(element) &&
+      element.fileId &&
+      element.customData?.linkedFile
+    ) {
+      folderIdByFileId.set(
+        element.fileId,
+        (element.customData.linkedFile as LinkedFileMeta).folderId,
+      );
+    }
+  }
+  const readableByFolderId = new Map<string, boolean>();
+  let unavailable = 0;
+  for (const fileId of fileIds) {
+    const folderId = folderIdByFileId.get(fileId as string);
+    if (!folderId) {
+      // not a linked image (embedded, or metadata stripped) — nothing to check
+      continue;
+    }
+    if (!readableByFolderId.has(folderId)) {
+      const entry = await getFolderEntry(folderId);
+      readableByFolderId.set(
+        folderId,
+        !!entry && (await queryFolderPermission(entry.handle)) === "granted",
+      );
+    }
+    if (!readableByFolderId.get(folderId)) {
+      unavailable++;
+    }
+  }
+  return unavailable;
 };

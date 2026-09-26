@@ -206,7 +206,9 @@
     "resetSyncFrameLayout": "重置布局",
     "refreshSyncFrame": "刷新检查",
     "linkedImageFolder": "链接文件夹",
-    "exportHighestQualityPng": "导出最高清 PNG（原图级）"
+    "exportHighestQualityPng": "导出最高清 PNG（原图级）",
+    "exportPdf": "导出 PDF（内嵌原图）",
+    "linkedOriginalsUnavailable": "{{count}} 张链接图片无法读取原图（文件夹未授权），已按缩略图导出"
   },
   "elementLink": {
     "title": "链接到对象",
