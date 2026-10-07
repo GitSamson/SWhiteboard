@@ -36,6 +36,10 @@ export type JSONExportData = {
  * (the on-disk original stays), and the embedded (thumbnail) copy may be the
  * only in-scene data left once the file is reopened without folder
  * permission.
+ *
+ * Exception: PDF/video originals are referenced through
+ * `customData.sourceFile` (not `element.fileId`) on non-deleted elements and
+ * must be kept on save, otherwise the source file data is lost.
  */
 const filterOutDeletedFiles = (
   elements: readonly ExcalidrawElement[],
@@ -50,6 +54,12 @@ const filterOutDeletedFiles = (
       (!element.isDeleted || element.customData?.linkedFile)
     ) {
       nextFiles[element.fileId] = files[element.fileId];
+    }
+    if (!element.isDeleted && element.customData?.sourceFile?.fileId) {
+      const sourceFileId = element.customData.sourceFile.fileId;
+      if (files[sourceFileId]) {
+        nextFiles[sourceFileId] = files[sourceFileId];
+      }
     }
   }
   return nextFiles;

@@ -288,6 +288,7 @@ export const Toolbar = ({
         )}
         <TextToolButton {...toolProps} />
         {UIOptions.tools?.image !== false && <ImageToolButton {...toolProps} />}
+        {app.props.renderCustomToolbarItems?.()}
         <EraserToolButton {...toolProps} />
 
         <div

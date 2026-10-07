@@ -112,6 +112,15 @@ import { RenameLinkedImageDialog } from "./linkedAssets/ui/RenameLinkedImageDial
 import { DeleteHiddenImagesDialog } from "./linkedAssets/ui/DeleteHiddenImagesDialog";
 import { OrphanedFolderDialog } from "./linkedAssets/ui/OrphanedFolderDialog";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
+import { PdfEmbedWidget } from "./pdf/PdfEmbedWidget";
+import { PdfToolbarHost } from "./pdf/PdfToolbarHost";
+import { importPdfFile } from "./pdf/pdfImport";
+import { ensurePdfPage, registerPdfPageBridge } from "./pdf/pdfPageCache";
+import { publishPdfSelection } from "./pdf/pdfSelectionStore";
+import { MediaToolbarItems } from "./media/MediaToolbarItems";
+import { pickFile } from "./media/filePicker";
+import { VideoEmbed } from "./video/VideoEmbed";
+import { importVideoFile, isSupportedVideoFile } from "./video/videoImport";
 import {
   ExportToExcalidrawPlus,
   exportToExcalidrawPlus,
@@ -406,6 +415,40 @@ const ExcalidrawWrapper = () => {
 
   const debugCanvasRef = useRef<HTMLCanvasElement>(null);
 
+  // wire the pdf page cache into the library's render bridge once the API is
+  // up (the miss handler needs it to start fetches from render misses)
+  useEffect(() => {
+    if (!excalidrawAPI) {
+      return;
+    }
+    registerPdfPageBridge(excalidrawAPI);
+  }, [excalidrawAPI]);
+
+  // Re-hydrate pdf page bitmaps whenever pdf elements are in the scene. After
+  // a refresh the runtime page cache starts empty and BinaryFiles restore
+  // asynchronously — every scene change retries (ensurePdfPage short-circuits
+  // on cached/in-flight pages) until the bytes arrive and the placeholder
+  // heals. Without this, restored pdf elements show the placeholder forever.
+  useEffect(() => {
+    if (!excalidrawAPI) {
+      return;
+    }
+    const unsubscribe = excalidrawAPI.onChange((elements) => {
+      for (const element of elements) {
+        if (element.type === "pdf" && !element.isDeleted) {
+          const currentPage =
+            (
+              element.customData?.sourceFile as
+                | { currentPage?: number }
+                | undefined
+            )?.currentPage ?? 1;
+          void ensurePdfPage(excalidrawAPI, element, currentPage);
+        }
+      }
+    });
+    return unsubscribe;
+  }, [excalidrawAPI]);
+
   useEffect(() => {
     trackEvent("load", "frame", getFrame());
     // Delayed so that the app has a time to load the latest SW
@@ -547,7 +590,13 @@ const ExcalidrawWrapper = () => {
         const fileIds =
           data.scene.elements?.reduce((acc, element) => {
             if (isInitializedImageElement(element)) {
-              return acc.concat(element.fileId);
+              acc.push(element.fileId);
+            }
+            // media-import embeddables keep their PDF/video source in
+            // customData.sourceFile.fileId — those files must be restored too
+            const sourceFileId = element.customData?.sourceFile?.fileId;
+            if (sourceFileId) {
+              acc.push(sourceFileId as FileId);
             }
             return acc;
           }, [] as FileId[]) || [];
@@ -677,7 +726,13 @@ const ExcalidrawWrapper = () => {
                 // only load and update images that aren't already loaded
                 !currFiles[element.fileId]
               ) {
-                return acc.concat(element.fileId);
+                acc.push(element.fileId);
+              }
+              // media-import sources (PDF/video) are referenced via
+              // customData.sourceFile, not element.fileId
+              const sourceFileId = element.customData?.sourceFile?.fileId;
+              if (sourceFileId && !currFiles[sourceFileId as FileId]) {
+                acc.push(sourceFileId as FileId);
               }
               return acc;
             }, [] as FileId[]) || [];
@@ -808,6 +863,10 @@ const ExcalidrawWrapper = () => {
         window.devicePixelRatio,
       );
     }
+
+    // feed the pdf toolbar host (external store — no re-render unless the
+    // single-selected pdf element or viewport actually changed)
+    publishPdfSelection(elements, appState);
   };
 
   const [latestShareableLink, setLatestShareableLink] = useState<string | null>(
@@ -874,6 +933,87 @@ const ExcalidrawWrapper = () => {
   const onCollabDialogOpen = useCallback(
     () => setShareDialogState({ isOpen: true, type: "collaborationOnly" }),
     [setShareDialogState],
+  );
+
+  // ---------------------------------------------------------------------------
+  // media import (PDF / video embeds, rendered app-side via renderEmbeddable)
+  // ---------------------------------------------------------------------------
+  const onDropFiles = useCallback(
+    async (files: File[], pos: { x: number; y: number }): Promise<boolean> => {
+      if (!excalidrawAPI || files.length === 0) {
+        return false;
+      }
+      const isPdf = (file: File) =>
+        file.type === "application/pdf" ||
+        file.name.toLowerCase().endsWith(".pdf");
+      const pdfFiles = files.filter(isPdf);
+      const videoFiles = files.filter(
+        (file) => !isPdf(file) && isSupportedVideoFile(file),
+      );
+      if (pdfFiles.length === 0 && videoFiles.length === 0) {
+        return false;
+      }
+      for (const file of pdfFiles) {
+        await importPdfFile(file, pos, excalidrawAPI);
+      }
+      for (const file of videoFiles) {
+        await importVideoFile(file, pos, excalidrawAPI);
+      }
+      // consume the drop only when nothing is left for the default (image)
+      // handling
+      return pdfFiles.length + videoFiles.length === files.length;
+    },
+    [excalidrawAPI],
+  );
+
+  const importAtViewportCenter = useCallback(
+    async (kind: "pdf" | "video") => {
+      if (!excalidrawAPI) {
+        return;
+      }
+      const accept =
+        kind === "pdf"
+          ? [".pdf", "application/pdf"]
+          : // video/* keeps mobile pickers filtered to the video gallery;
+            // extensions cover pickers that report an empty MIME type
+            [
+              "video/*",
+              ".mp4",
+              ".webm",
+              ".mov",
+              ".m4v",
+              ".mkv",
+              ".ogv",
+              ".3gp",
+              ".3gpp",
+            ];
+      // appending the input to the DOM matters: iOS Safari silently ignores
+      // click() on detached file inputs (broke repeat imports on mobile)
+      const file = await pickFile(accept, document);
+      if (!file) {
+        return;
+      }
+      const appState = excalidrawAPI.getAppState();
+      const pos = {
+        x: (appState.width / 2 - appState.scrollX) / appState.zoom.value,
+        y: (appState.height / 2 - appState.scrollY) / appState.zoom.value,
+      };
+      if (kind === "pdf") {
+        await importPdfFile(file, pos, excalidrawAPI);
+      } else {
+        await importVideoFile(file, pos, excalidrawAPI);
+      }
+    },
+    [excalidrawAPI],
+  );
+
+  const onImportPdf = useCallback(
+    () => void importAtViewportCenter("pdf"),
+    [importAtViewportCenter],
+  );
+  const onImportVideo = useCallback(
+    () => void importAtViewportCenter("video"),
+    [importAtViewportCenter],
   );
 
   // ---------------------------------------------------------------------------
@@ -996,6 +1136,43 @@ const ExcalidrawWrapper = () => {
         userToFollow={userToFollow}
         onChange={onChange}
         onExport={onExport}
+        onDropFiles={onDropFiles}
+        renderEmbeddable={(element, appState) => {
+          const kind = element.customData?.sourceFile?.kind;
+          if (!excalidrawAPI) {
+            return null;
+          }
+          if (kind === "pdf") {
+            // legacy scenes only: new imports create native `pdf` elements
+            // rendered by the static canvas pipeline (see PdfToolbarHost)
+            return (
+              <PdfEmbedWidget
+                element={element}
+                appState={appState}
+                excalidrawAPI={excalidrawAPI}
+              />
+            );
+          }
+          if (kind === "video") {
+            return (
+              <VideoEmbed
+                element={element}
+                appState={appState}
+                excalidrawAPI={excalidrawAPI}
+              />
+            );
+          }
+          return null;
+        }}
+        validateEmbeddable={(link) =>
+          link.startsWith("appfile:") ? true : undefined
+        }
+        renderCustomToolbarItems={() => (
+          <MediaToolbarItems
+            onImportPdf={onImportPdf}
+            onImportVideo={onImportVideo}
+          />
+        )}
         initialData={initialStatePromiseRef.current.promise}
         isCollaborating={isCollaborating}
         onPointerUpdate={collabAPI?.onPointerUpdate}
@@ -1118,6 +1295,8 @@ const ExcalidrawWrapper = () => {
                 }
               : undefined
           }
+          onImportPdf={excalidrawAPI ? onImportPdf : undefined}
+          onImportVideo={excalidrawAPI ? onImportVideo : undefined}
         />
         <MissingLinkedBanner />
         <ReconnectBanner />
@@ -1150,6 +1329,7 @@ const ExcalidrawWrapper = () => {
         </OverwriteConfirmDialog>
         <AppFooter onChange={() => excalidrawAPI?.refresh()} />
         {excalidrawAPI && <AIComponents excalidrawAPI={excalidrawAPI} />}
+        {excalidrawAPI && <PdfToolbarHost excalidrawAPI={excalidrawAPI} />}
 
         <TTDDialogTrigger />
         {isCollaborating && isOffline && (

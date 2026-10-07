@@ -117,6 +117,10 @@ export type DataURL = string & { _brand: "DataURL" };
 export type BinaryFileData = {
   mimeType:
     | ValueOf<typeof IMAGE_MIME_TYPES>
+    | typeof MIME_TYPES.pdf
+    | typeof MIME_TYPES.videoMp4
+    | typeof MIME_TYPES.videoWebm
+    | typeof MIME_TYPES.videoQuickTime
     // future user or unknown file type
     | typeof MIME_TYPES.binary;
   id: FileId;
@@ -856,6 +860,8 @@ export interface ExcalidrawProps {
     isMobile: boolean,
     appState: UIAppState,
   ) => JSX.Element | null;
+  /** render extra buttons inside the main toolbar, next to the image tool */
+  renderCustomToolbarItems?: () => JSX.Element | null;
   langCode?: Language["code"];
   viewModeEnabled?: boolean;
   /**
@@ -968,6 +974,14 @@ export interface ExcalidrawProps {
     element: NonDeleted<ExcalidrawEmbeddableElement>,
     appState: AppState,
   ) => JSX.Element | null;
+  /**
+   * Called before dropped files are filtered to images. Handle non-image
+   * files (e.g. PDF/video) and return true to skip the default image path.
+   */
+  onDropFiles?: (
+    files: File[],
+    pos: { x: number; y: number },
+  ) => Promise<boolean> | boolean;
   aiEnabled?: boolean;
   showDeprecatedFonts?: boolean;
   renderScrollbars?: boolean;

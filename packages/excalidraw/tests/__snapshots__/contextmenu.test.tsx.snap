@@ -254,6 +254,50 @@ exports[`contextMenu element > does not show 'Download original image' for non-i
           </React.Fragment>
         </svg>,
         "keywords": [
+          "source",
+          "download",
+          "file",
+        ],
+        "label": "labels.downloadSourceFile",
+        "name": "downloadSourceFile",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <React.Fragment>
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"
+            />
+            <path
+              d="M7 11l5 5l5 -5"
+            />
+            <path
+              d="M12 4l0 12"
+            />
+          </React.Fragment>
+        </svg>,
+        "keywords": [
           "image",
           "download",
           "export",
@@ -1512,6 +1556,1562 @@ exports[`contextMenu element > does not show 'Download original image' for non-i
 ]
 `;
 
+exports[`contextMenu element > does not show 'Download source file' for elements without a sourceFile ref > [end of test] appState 1`] = `
+{
+  "activeEmbeddable": null,
+  "activeLockedId": null,
+  "activeTool": {
+    "customType": null,
+    "fromSelection": false,
+    "lastActiveTool": null,
+    "locked": false,
+    "type": "selection",
+  },
+  "bindMode": "orbit",
+  "bindingPreference": "enabled",
+  "boxSelectionMode": "contain",
+  "collaborators": Map {},
+  "colorTopPicks": {
+    "bucketFill": null,
+    "elementBackground": null,
+    "elementStroke": null,
+  },
+  "contextMenu": {
+    "items": [
+      "separator",
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeWidth={"1.25000"}
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M7 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"
+            />
+            <path
+              d="M17 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"
+            />
+            <path
+              d="M9.15 14.85l8.85 -10.85"
+            />
+            <path
+              d="M6 4l8.85 10.85"
+            />
+          </g>
+        </svg>,
+        "keyTest": [Function],
+        "label": "labels.cut",
+        "name": "cut",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+        >
+          <g
+            strokeWidth="1.25"
+          >
+            <path
+              d="M14.375 6.458H8.958a2.5 2.5 0 0 0-2.5 2.5v5.417a2.5 2.5 0 0 0 2.5 2.5h5.417a2.5 2.5 0 0 0 2.5-2.5V8.958a2.5 2.5 0 0 0-2.5-2.5Z"
+            />
+            <path
+              clipRule="evenodd"
+              d="M11.667 3.125c.517 0 .986.21 1.325.55.34.338.55.807.55 1.325v1.458H8.333c-.485 0-.927.185-1.26.487-.343.312-.57.75-.609 1.24l-.005 5.357H5a1.87 1.87 0 0 1-1.326-.55 1.87 1.87 0 0 1-.549-1.325V5c0-.518.21-.987.55-1.326.338-.34.807-.549 1.325-.549h6.667Z"
+            />
+          </g>
+        </svg>,
+        "keyTest": undefined,
+        "label": "labels.copy",
+        "name": "copy",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "keyTest": undefined,
+        "label": "labels.paste",
+        "name": "paste",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
+        "label": "labels.selectAllElementsInFrame",
+        "name": "selectAllElementsInFrame",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "canvas",
+        },
+      },
+      {
+        "label": "labels.removeAllElementsFromFrame",
+        "name": "removeAllElementsFromFrame",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "history",
+        },
+      },
+      {
+        "label": "labels.wrapSelectionInFrame",
+        "name": "wrapSelectionInFrame",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
+        "PanelComponent": [Function],
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeWidth="1.25"
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M8 5v10a1 1 0 0 0 1 1h10"
+            />
+            <path
+              d="M5 8h10a1 1 0 0 1 1 1v10"
+            />
+          </g>
+        </svg>,
+        "keywords": [
+          "image",
+          "crop",
+        ],
+        "label": "helpDialog.cropStart",
+        "name": "cropEditor",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <React.Fragment>
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"
+            />
+            <path
+              d="M7 11l5 5l5 -5"
+            />
+            <path
+              d="M12 4l0 12"
+            />
+          </React.Fragment>
+        </svg>,
+        "keywords": [
+          "image",
+          "download",
+          "original",
+        ],
+        "label": "labels.downloadOriginalImage",
+        "name": "downloadOriginalImage",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <React.Fragment>
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"
+            />
+            <path
+              d="M7 11l5 5l5 -5"
+            />
+            <path
+              d="M12 4l0 12"
+            />
+          </React.Fragment>
+        </svg>,
+        "keywords": [
+          "source",
+          "download",
+          "file",
+        ],
+        "label": "labels.downloadSourceFile",
+        "name": "downloadSourceFile",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <React.Fragment>
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"
+            />
+            <path
+              d="M7 11l5 5l5 -5"
+            />
+            <path
+              d="M12 4l0 12"
+            />
+          </React.Fragment>
+        </svg>,
+        "keywords": [
+          "image",
+          "download",
+          "export",
+          "png",
+          "high quality",
+        ],
+        "label": "labels.exportHighestQualityPng",
+        "name": "exportHighestQualityPng",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "export",
+        },
+        "viewMode": true,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <React.Fragment>
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"
+            />
+            <path
+              d="M7 11l5 5l5 -5"
+            />
+            <path
+              d="M12 4l0 12"
+            />
+          </React.Fragment>
+        </svg>,
+        "keywords": [
+          "image",
+          "download",
+          "export",
+          "pdf",
+          "high quality",
+        ],
+        "label": "labels.exportPdf",
+        "name": "exportPdf",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "export",
+        },
+        "viewMode": true,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+        >
+          <g
+            strokeWidth="1.25"
+          >
+            <path
+              d="M8.333 11.667a2.917 2.917 0 0 0 4.167 0l3.333-3.334a2.946 2.946 0 1 0-4.166-4.166l-.417.416"
+            />
+            <path
+              d="M11.667 8.333a2.917 2.917 0 0 0-4.167 0l-3.333 3.334a2.946 2.946 0 0 0 4.166 4.166l.417-.416"
+            />
+          </g>
+        </svg>,
+        "keywords": [
+          "image",
+          "link",
+          "folder",
+          "sync",
+        ],
+        "label": "labels.convertToLinked",
+        "name": "convertToLinked",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": false,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+        >
+          <g
+            strokeWidth="1.5"
+          >
+            <polyline
+              points="12 16 18 10 12 4"
+            />
+            <polyline
+              points="8 4 2 10 8 16"
+            />
+          </g>
+        </svg>,
+        "keywords": [
+          "image",
+          "embed",
+          "folder",
+          "sync",
+        ],
+        "label": "labels.convertToEmbedded",
+        "name": "convertToEmbedded",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": false,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeWidth={"1.25000"}
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"
+            />
+            <path
+              d="M13.5 6.5l4 4"
+            />
+          </g>
+        </svg>,
+        "keywords": [
+          "image",
+          "rename",
+          "file",
+          "link",
+        ],
+        "label": "labels.renameLinkedImage",
+        "name": "renameLinkedImage",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <g
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={"1.50000"}
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"
+            />
+            <path
+              d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"
+            />
+          </g>
+        </svg>,
+        "keywords": [
+          "image",
+          "hidden",
+          "folder",
+          "sync",
+          "frame",
+        ],
+        "label": "labels.showHiddenImages",
+        "name": "showHiddenImages",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": false,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+        >
+          <path
+            d="M3.333 5.833h13.334M8.333 9.167v5M11.667 9.167v5M4.167 5.833l.833 10c0 .92.746 1.667 1.667 1.667h6.666c.92 0 1.667-.746 1.667-1.667l.833-10M7.5 5.833v-2.5c0-.46.373-.833.833-.833h3.334c.46 0 .833.373.833.833v2.5"
+            strokeWidth="1.25"
+          />
+        </svg>,
+        "keywords": [
+          "image",
+          "hidden",
+          "delete",
+          "folder",
+          "sync",
+          "frame",
+        ],
+        "label": "labels.deleteHiddenImages",
+        "name": "deleteHiddenImages",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": false,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeWidth={"1.25000"}
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M21 21l-6 -6"
+            />
+            <path
+              d="M3.268 12.043a7.017 7.017 0 0 0 6.634 4.957a7.012 7.012 0 0 0 7.043 -6.131a7 7 0 0 0 -5.314 -7.672a7.021 7.021 0 0 0 -8.241 4.403"
+            />
+            <path
+              d="M3 4v4h4"
+            />
+          </g>
+        </svg>,
+        "keywords": [
+          "image",
+          "layout",
+          "reset",
+          "folder",
+          "sync",
+          "frame",
+        ],
+        "label": "labels.resetSyncFrameLayout",
+        "name": "resetSyncFrameLayout",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": false,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+        >
+          <path
+            d="M12.5 10.833 15.833 7.5 12.5 4.167M15.833 7.5H6.667a3.333 3.333 0 1 0 0 6.667H7.5"
+            strokeWidth="1.25"
+          />
+        </svg>,
+        "keywords": [
+          "image",
+          "refresh",
+          "rescan",
+          "folder",
+          "sync",
+          "frame",
+        ],
+        "label": "labels.refreshSyncFrame",
+        "name": "refreshSyncFrame",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      "separator",
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeWidth={"1.25000"}
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M14 3v4a1 1 0 0 0 1 1h4"
+            />
+            <path
+              d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4"
+            />
+            <path
+              d="M20 15h-1a2 2 0 0 0 -2 2v2a2 2 0 0 0 2 2h1v-3"
+            />
+            <path
+              d="M5 18h1.5a1.5 1.5 0 0 0 0 -3h-1.5v6"
+            />
+            <path
+              d="M11 21v-6l3 6v-6"
+            />
+          </g>
+        </svg>,
+        "keyTest": [Function],
+        "keywords": [
+          "png",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyAsPng",
+        "name": "copyAsPng",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeWidth={"1.25000"}
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M14 3v4a1 1 0 0 0 1 1h4"
+            />
+            <path
+              d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4"
+            />
+            <path
+              d="M4 20.25c0 .414 .336 .75 .75 .75h1.25a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-1a1 1 0 0 1 -1 -1v-1a1 1 0 0 1 1 -1h1.25a.75 .75 0 0 1 .75 .75"
+            />
+            <path
+              d="M10 15l2 6l2 -6"
+            />
+            <path
+              d="M20 15h-1a2 2 0 0 0 -2 2v2a2 2 0 0 0 2 2h1v-3"
+            />
+          </g>
+        </svg>,
+        "keywords": [
+          "svg",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyAsSvg",
+        "name": "copyAsSvg",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "keywords": [
+          "text",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyText",
+        "name": "copyText",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeWidth={"1.25000"}
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M5 3m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v2a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z"
+            />
+            <path
+              d="M19 6h1a2 2 0 0 1 2 2a5 5 0 0 1 -5 5l-5 0v2"
+            />
+            <path
+              d="M10 15m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z"
+            />
+          </g>
+        </svg>,
+        "keyTest": [Function],
+        "label": "labels.copyStyles",
+        "name": "copyStyles",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeWidth={"1.25000"}
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M5 3m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v2a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z"
+            />
+            <path
+              d="M19 6h1a2 2 0 0 1 2 2a5 5 0 0 1 -5 5l-5 0v2"
+            />
+            <path
+              d="M10 15m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z"
+            />
+          </g>
+        </svg>,
+        "keyTest": [Function],
+        "label": "labels.pasteStyles",
+        "name": "pasteStyles",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
+        "PanelComponent": [Function],
+        "icon": [Function],
+        "keyTest": [Function],
+        "label": "labels.group",
+        "name": "group",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "icon": null,
+        "label": "labels.autoResize",
+        "name": "autoResize",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "labels.unbindText",
+        "name": "unbindText",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "labels.bindText",
+        "name": "bindText",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "labels.createContainerFromText",
+        "name": "wrapTextInContainer",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "PanelComponent": [Function],
+        "icon": [Function],
+        "keyTest": [Function],
+        "label": "labels.ungroup",
+        "name": "ungroup",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
+        "label": "labels.addToLibrary",
+        "name": "addToLibrary",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
+        "PanelComponent": [Function],
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          style={
+            {
+              "transform": "rotate(180deg)",
+            }
+          }
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeWidth={"1.50000"}
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M12 5l0 14"
+            />
+            <path
+              d="M16 9l-4 -4"
+            />
+            <path
+              d="M8 9l4 -4"
+            />
+          </g>
+        </svg>,
+        "keyPriority": 40,
+        "keyTest": [Function],
+        "keywords": [
+          "move down",
+          "zindex",
+          "layer",
+        ],
+        "label": "labels.sendBackward",
+        "name": "sendBackward",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "PanelComponent": [Function],
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeWidth={"1.50000"}
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M12 5l0 14"
+            />
+            <path
+              d="M16 9l-4 -4"
+            />
+            <path
+              d="M8 9l4 -4"
+            />
+          </g>
+        </svg>,
+        "keyPriority": 40,
+        "keyTest": [Function],
+        "keywords": [
+          "move up",
+          "zindex",
+          "layer",
+        ],
+        "label": "labels.bringForward",
+        "name": "bringForward",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "PanelComponent": [Function],
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          style={
+            {
+              "transform": "rotate(180deg)",
+            }
+          }
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeWidth={"1.50000"}
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M12 10l0 10"
+            />
+            <path
+              d="M12 10l4 4"
+            />
+            <path
+              d="M12 10l-4 4"
+            />
+            <path
+              d="M4 4l16 0"
+            />
+          </g>
+        </svg>,
+        "keyTest": [Function],
+        "keywords": [
+          "move down",
+          "zindex",
+          "layer",
+        ],
+        "label": "labels.sendToBack",
+        "name": "sendToBack",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "PanelComponent": [Function],
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeWidth={"1.50000"}
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M12 10l0 10"
+            />
+            <path
+              d="M12 10l4 4"
+            />
+            <path
+              d="M12 10l-4 4"
+            />
+            <path
+              d="M4 4l16 0"
+            />
+          </g>
+        </svg>,
+        "keyTest": [Function],
+        "keywords": [
+          "move up",
+          "zindex",
+          "layer",
+        ],
+        "label": "labels.bringToFront",
+        "name": "bringToFront",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeWidth={"1.25000"}
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M12 3l0 18"
+            />
+            <path
+              d="M16 7l0 10l5 0l-5 -10"
+            />
+            <path
+              d="M8 7l0 10l-5 0l5 -10"
+            />
+          </g>
+        </svg>,
+        "keyTest": [Function],
+        "label": "labels.flipHorizontal",
+        "name": "flipHorizontal",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeWidth={"1.25000"}
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M3 12l18 0"
+            />
+            <path
+              d="M7 16l10 0l-10 5l0 -5"
+            />
+            <path
+              d="M7 8l10 0l-10 -5l0 5"
+            />
+          </g>
+        </svg>,
+        "keyTest": [Function],
+        "label": "labels.flipVertical",
+        "name": "flipVertical",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
+        "PanelComponent": [Function],
+        "category": "Elements",
+        "keywords": [
+          "line",
+        ],
+        "label": [Function],
+        "name": "toggleLinearEditor",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
+        "PanelComponent": [Function],
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+        >
+          <g
+            strokeWidth="1.25"
+          >
+            <path
+              d="M8.333 11.667a2.917 2.917 0 0 0 4.167 0l3.333-3.334a2.946 2.946 0 1 0-4.166-4.166l-.417.416"
+            />
+            <path
+              d="M11.667 8.333a2.917 2.917 0 0 0-4.167 0l-3.333 3.334a2.946 2.946 0 0 0 4.166 4.166l.417-.416"
+            />
+          </g>
+        </svg>,
+        "keyTest": [Function],
+        "label": [Function],
+        "name": "hyperlink",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "action": "click",
+          "category": "hyperlink",
+        },
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <React.Fragment>
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M8 8m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z"
+            />
+            <path
+              d="M16 8v-2a2 2 0 0 0 -2 -2h-8a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h2"
+            />
+          </React.Fragment>
+        </svg>,
+        "label": "labels.copyElementLink",
+        "name": "copyElementLink",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
+        "PanelComponent": [Function],
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+        >
+          <g
+            strokeWidth="1.25"
+          >
+            <path
+              d="M14.375 6.458H8.958a2.5 2.5 0 0 0-2.5 2.5v5.417a2.5 2.5 0 0 0 2.5 2.5h5.417a2.5 2.5 0 0 0 2.5-2.5V8.958a2.5 2.5 0 0 0-2.5-2.5Z"
+            />
+            <path
+              clipRule="evenodd"
+              d="M11.667 3.125c.517 0 .986.21 1.325.55.34.338.55.807.55 1.325v1.458H8.333c-.485 0-.927.185-1.26.487-.343.312-.57.75-.609 1.24l-.005 5.357H5a1.87 1.87 0 0 1-1.326-.55 1.87 1.87 0 0 1-.549-1.325V5c0-.518.21-.987.55-1.326.338-.34.807-.549 1.325-.549h6.667Z"
+            />
+          </g>
+        </svg>,
+        "keyTest": [Function],
+        "label": "labels.duplicateSelection",
+        "name": "duplicateSelection",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "icon": [Function],
+        "keyTest": [Function],
+        "label": [Function],
+        "name": "toggleElementLock",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
+        "PanelComponent": [Function],
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+        >
+          <path
+            d="M3.333 5.833h13.334M8.333 9.167v5M11.667 9.167v5M4.167 5.833l.833 10c0 .92.746 1.667 1.667 1.667h6.666c.92 0 1.667-.746 1.667-1.667l.833-10M7.5 5.833v-2.5c0-.46.373-.833.833-.833h3.334c.46 0 .833.373.833.833v2.5"
+            strokeWidth="1.25"
+          />
+        </svg>,
+        "keyTest": [Function],
+        "label": "labels.delete",
+        "name": "deleteSelectedElements",
+        "perform": [Function],
+        "trackEvent": {
+          "action": "delete",
+          "category": "element",
+        },
+      },
+    ],
+    "left": -17,
+    "top": -7,
+  },
+  "croppingElementId": null,
+  "currentHoveredFontFamily": null,
+  "currentItemArrowType": "round",
+  "currentItemBackgroundColor": "transparent",
+  "currentItemEndArrowhead": "arrow",
+  "currentItemFillStyle": "solid",
+  "currentItemFontFamily": 5,
+  "currentItemFontSize": 20,
+  "currentItemOpacity": 100,
+  "currentItemRoughness": 1,
+  "currentItemRoundness": "sharp",
+  "currentItemStartArrowhead": null,
+  "currentItemStrokeColor": "#1e1e1e",
+  "currentItemStrokeStyle": "solid",
+  "currentItemStrokeVariability": "constant",
+  "currentItemStrokeWidthKey": "medium",
+  "currentItemTextAlign": "left",
+  "cursorButton": "up",
+  "defaultSidebarDockedPreference": false,
+  "editingFrame": null,
+  "editingGroupId": null,
+  "editingTextElement": null,
+  "elementsToHighlight": null,
+  "errorMessage": null,
+  "exportBackground": true,
+  "exportEmbedScene": false,
+  "exportScale": 1,
+  "exportWithDarkMode": false,
+  "fileHandle": null,
+  "frameRendering": {
+    "clip": true,
+    "enabled": true,
+    "name": true,
+    "outline": true,
+  },
+  "frameToHighlight": null,
+  "gridModeEnabled": false,
+  "gridSize": 20,
+  "gridStep": 5,
+  "height": 100,
+  "hoveredArrowTextAnchor": null,
+  "hoveredElementIds": {},
+  "isBindingEnabled": true,
+  "isCropping": false,
+  "isLoading": false,
+  "isMidpointSnappingEnabled": true,
+  "isResizing": false,
+  "isRotating": false,
+  "lastPointerDownWith": "mouse",
+  "lockedMultiSelections": {},
+  "multiElement": null,
+  "name": "Untitled-201933152653",
+  "newElement": null,
+  "objectsSnapModeEnabled": false,
+  "offsetLeft": 20,
+  "offsetTop": 10,
+  "openDialog": null,
+  "openMenu": null,
+  "openPopup": null,
+  "openSidebar": null,
+  "originSnapOffset": null,
+  "penDetected": false,
+  "penMode": false,
+  "preferredSelectionTool": {
+    "initialized": true,
+    "type": "selection",
+  },
+  "previousSelectedElementIds": {},
+  "resizingElement": null,
+  "scrollConstraints": null,
+  "scrollX": 0,
+  "scrollY": 0,
+  "scrolledOutside": true,
+  "searchMatches": null,
+  "selectedElementIds": {
+    "id0": true,
+  },
+  "selectedElementsAreBeingDragged": false,
+  "selectedGroupIds": {},
+  "selectedLinearElement": null,
+  "selectionElement": null,
+  "shouldCacheIgnoreZoom": false,
+  "showHyperlinkPopup": false,
+  "showWelcomeScreen": true,
+  "snapLines": [],
+  "stats": {
+    "open": false,
+    "panels": 3,
+  },
+  "suggestedBinding": null,
+  "theme": "light",
+  "toast": null,
+  "viewBackgroundColor": "#ffffff",
+  "viewModeEnabled": false,
+  "width": 200,
+  "zenModeEnabled": false,
+  "zoom": {
+    "value": 1,
+  },
+}
+`;
+
+exports[`contextMenu element > does not show 'Download source file' for elements without a sourceFile ref > [end of test] element 0 1`] = `
+{
+  "angle": 0,
+  "backgroundColor": "transparent",
+  "boundElements": null,
+  "customData": undefined,
+  "fillStyle": "solid",
+  "frameId": null,
+  "groupIds": [],
+  "height": 10,
+  "id": "id0",
+  "index": "a0",
+  "isDeleted": false,
+  "link": null,
+  "locked": false,
+  "opacity": 100,
+  "roughness": 1,
+  "roundness": null,
+  "seed": 1278240551,
+  "strokeColor": "#1e1e1e",
+  "strokeStyle": "solid",
+  "strokeWidth": 2,
+  "type": "rectangle",
+  "updated": 1,
+  "version": 3,
+  "versionNonce": 401146281,
+  "width": 10,
+  "x": -20,
+  "y": -10,
+}
+`;
+
+exports[`contextMenu element > does not show 'Download source file' for elements without a sourceFile ref > [end of test] number of elements 1`] = `1`;
+
+exports[`contextMenu element > does not show 'Download source file' for elements without a sourceFile ref > [end of test] number of renders 1`] = `5`;
+
+exports[`contextMenu element > does not show 'Download source file' for elements without a sourceFile ref > [end of test] redo stack 1`] = `[]`;
+
+exports[`contextMenu element > does not show 'Download source file' for elements without a sourceFile ref > [end of test] undo stack 1`] = `
+[
+  {
+    "appState": AppStateDelta {
+      "delta": Delta {
+        "deleted": {
+          "selectedElementIds": {
+            "id0": true,
+          },
+        },
+        "inserted": {
+          "selectedElementIds": {},
+        },
+      },
+    },
+    "elements": {
+      "added": {},
+      "removed": {
+        "id0": {
+          "deleted": {
+            "angle": 0,
+            "backgroundColor": "transparent",
+            "boundElements": null,
+            "customData": undefined,
+            "fillStyle": "solid",
+            "frameId": null,
+            "groupIds": [],
+            "height": 10,
+            "index": "a0",
+            "isDeleted": false,
+            "link": null,
+            "locked": false,
+            "opacity": 100,
+            "roughness": 1,
+            "roundness": null,
+            "strokeColor": "#1e1e1e",
+            "strokeStyle": "solid",
+            "strokeWidth": 2,
+            "type": "rectangle",
+            "version": 3,
+            "width": 10,
+            "x": -20,
+            "y": -10,
+          },
+          "inserted": {
+            "isDeleted": true,
+            "version": 2,
+          },
+        },
+      },
+      "updated": {},
+    },
+    "id": "id2",
+  },
+]
+`;
+
 exports[`contextMenu element > downloads all selected images via 'Download original image' context menu item > [end of test] appState 1`] = `
 {
   "activeEmbeddable": null,
@@ -2366,6 +3966,50 @@ exports[`contextMenu element > right-clicking on a group should select whole gro
         ],
         "label": "labels.downloadOriginalImage",
         "name": "downloadOriginalImage",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <React.Fragment>
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"
+            />
+            <path
+              d="M7 11l5 5l5 -5"
+            />
+            <path
+              d="M12 4l0 12"
+            />
+          </React.Fragment>
+        </svg>,
+        "keywords": [
+          "source",
+          "download",
+          "file",
+        ],
+        "label": "labels.downloadSourceFile",
+        "name": "downloadSourceFile",
         "perform": [Function],
         "predicate": [Function],
         "trackEvent": {
@@ -7293,6 +8937,178 @@ exports[`contextMenu element > selecting 'Ungroup selection' in context menu ung
 ]
 `;
 
+exports[`contextMenu element > shows 'Download source file' for elements with a sourceFile ref and downloads it > [end of test] appState 1`] = `
+{
+  "activeEmbeddable": null,
+  "activeLockedId": null,
+  "activeTool": {
+    "customType": null,
+    "fromSelection": false,
+    "lastActiveTool": null,
+    "locked": false,
+    "type": "selection",
+  },
+  "bindMode": "orbit",
+  "bindingPreference": "enabled",
+  "boxSelectionMode": "contain",
+  "collaborators": Map {},
+  "colorTopPicks": {
+    "bucketFill": null,
+    "elementBackground": null,
+    "elementStroke": null,
+  },
+  "contextMenu": null,
+  "croppingElementId": null,
+  "currentHoveredFontFamily": null,
+  "currentItemArrowType": "round",
+  "currentItemBackgroundColor": "transparent",
+  "currentItemEndArrowhead": "arrow",
+  "currentItemFillStyle": "solid",
+  "currentItemFontFamily": 5,
+  "currentItemFontSize": 20,
+  "currentItemOpacity": 100,
+  "currentItemRoughness": 1,
+  "currentItemRoundness": "sharp",
+  "currentItemStartArrowhead": null,
+  "currentItemStrokeColor": "#1e1e1e",
+  "currentItemStrokeStyle": "solid",
+  "currentItemStrokeVariability": "constant",
+  "currentItemStrokeWidthKey": "medium",
+  "currentItemTextAlign": "left",
+  "cursorButton": "up",
+  "defaultSidebarDockedPreference": false,
+  "editingFrame": null,
+  "editingGroupId": null,
+  "editingTextElement": null,
+  "elementsToHighlight": null,
+  "errorMessage": null,
+  "exportBackground": true,
+  "exportEmbedScene": false,
+  "exportScale": 1,
+  "exportWithDarkMode": false,
+  "fileHandle": null,
+  "frameRendering": {
+    "clip": true,
+    "enabled": true,
+    "name": true,
+    "outline": true,
+  },
+  "frameToHighlight": null,
+  "gridModeEnabled": false,
+  "gridSize": 20,
+  "gridStep": 5,
+  "height": 100,
+  "hoveredArrowTextAnchor": null,
+  "hoveredElementIds": {},
+  "isBindingEnabled": true,
+  "isCropping": false,
+  "isLoading": false,
+  "isMidpointSnappingEnabled": true,
+  "isResizing": false,
+  "isRotating": false,
+  "lastPointerDownWith": "mouse",
+  "lockedMultiSelections": {},
+  "multiElement": null,
+  "name": "Untitled-201933152653",
+  "newElement": null,
+  "objectsSnapModeEnabled": false,
+  "offsetLeft": 20,
+  "offsetTop": 10,
+  "openDialog": null,
+  "openMenu": null,
+  "openPopup": null,
+  "openSidebar": null,
+  "originSnapOffset": {
+    "x": 0,
+    "y": 0,
+  },
+  "penDetected": false,
+  "penMode": false,
+  "preferredSelectionTool": {
+    "initialized": true,
+    "type": "selection",
+  },
+  "previousSelectedElementIds": {},
+  "resizingElement": null,
+  "scrollConstraints": null,
+  "scrollX": 0,
+  "scrollY": 0,
+  "scrolledOutside": false,
+  "searchMatches": null,
+  "selectedElementIds": {
+    "id0": true,
+  },
+  "selectedElementsAreBeingDragged": false,
+  "selectedGroupIds": {},
+  "selectedLinearElement": null,
+  "selectionElement": null,
+  "shouldCacheIgnoreZoom": false,
+  "showHyperlinkPopup": false,
+  "showWelcomeScreen": true,
+  "snapLines": [],
+  "stats": {
+    "open": false,
+    "panels": 3,
+  },
+  "suggestedBinding": null,
+  "theme": "light",
+  "toast": null,
+  "viewBackgroundColor": "#ffffff",
+  "viewModeEnabled": false,
+  "width": 200,
+  "zenModeEnabled": false,
+  "zoom": {
+    "value": 1,
+  },
+}
+`;
+
+exports[`contextMenu element > shows 'Download source file' for elements with a sourceFile ref and downloads it > [end of test] element 0 1`] = `
+{
+  "angle": 0,
+  "backgroundColor": "transparent",
+  "boundElements": null,
+  "customData": {
+    "sourceFile": {
+      "fileId": "srcFile1",
+      "kind": "pdf",
+      "name": "report",
+    },
+  },
+  "fillStyle": "solid",
+  "frameId": null,
+  "groupIds": [],
+  "height": 100,
+  "id": "id0",
+  "index": "a0",
+  "isDeleted": false,
+  "link": null,
+  "locked": false,
+  "opacity": 100,
+  "roughness": 1,
+  "roundness": null,
+  "seed": 1,
+  "strokeColor": "#1e1e1e",
+  "strokeStyle": "solid",
+  "strokeWidth": 2,
+  "type": "embeddable",
+  "updated": 1,
+  "version": 2,
+  "versionNonce": 1278240551,
+  "width": 100,
+  "x": 0,
+  "y": 0,
+}
+`;
+
+exports[`contextMenu element > shows 'Download source file' for elements with a sourceFile ref and downloads it > [end of test] number of elements 1`] = `1`;
+
+exports[`contextMenu element > shows 'Download source file' for elements with a sourceFile ref and downloads it > [end of test] number of renders 1`] = `7`;
+
+exports[`contextMenu element > shows 'Download source file' for elements with a sourceFile ref and downloads it > [end of test] redo stack 1`] = `[]`;
+
+exports[`contextMenu element > shows 'Download source file' for elements with a sourceFile ref and downloads it > [end of test] undo stack 1`] = `[]`;
+
 exports[`contextMenu element > shows 'Group selection' in context menu for multiple selected elements > [end of test] appState 1`] = `
 {
   "activeEmbeddable": null,
@@ -7509,6 +9325,50 @@ exports[`contextMenu element > shows 'Group selection' in context menu for multi
         ],
         "label": "labels.downloadOriginalImage",
         "name": "downloadOriginalImage",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <React.Fragment>
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"
+            />
+            <path
+              d="M7 11l5 5l5 -5"
+            />
+            <path
+              d="M12 4l0 12"
+            />
+          </React.Fragment>
+        </svg>,
+        "keywords": [
+          "source",
+          "download",
+          "file",
+        ],
+        "label": "labels.downloadSourceFile",
+        "name": "downloadSourceFile",
         "perform": [Function],
         "predicate": [Function],
         "trackEvent": {
@@ -9152,6 +11012,50 @@ exports[`contextMenu element > shows 'Ungroup selection' in context menu for gro
         ],
         "label": "labels.downloadOriginalImage",
         "name": "downloadOriginalImage",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <React.Fragment>
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"
+            />
+            <path
+              d="M7 11l5 5l5 -5"
+            />
+            <path
+              d="M12 4l0 12"
+            />
+          </React.Fragment>
+        </svg>,
+        "keywords": [
+          "source",
+          "download",
+          "file",
+        ],
+        "label": "labels.downloadSourceFile",
+        "name": "downloadSourceFile",
         "perform": [Function],
         "predicate": [Function],
         "trackEvent": {
@@ -11579,6 +13483,50 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
           </React.Fragment>
         </svg>,
         "keywords": [
+          "source",
+          "download",
+          "file",
+        ],
+        "label": "labels.downloadSourceFile",
+        "name": "downloadSourceFile",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <React.Fragment>
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"
+            />
+            <path
+              d="M7 11l5 5l5 -5"
+            />
+            <path
+              d="M12 4l0 12"
+            />
+          </React.Fragment>
+        </svg>,
+        "keywords": [
           "image",
           "download",
           "export",
@@ -12958,6 +14906,50 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
         ],
         "label": "labels.downloadOriginalImage",
         "name": "downloadOriginalImage",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      {
+        "icon": <svg
+          aria-hidden="true"
+          className=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <React.Fragment>
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"
+            />
+            <path
+              d="M7 11l5 5l5 -5"
+            />
+            <path
+              d="M12 4l0 12"
+            />
+          </React.Fragment>
+        </svg>,
+        "keywords": [
+          "source",
+          "download",
+          "file",
+        ],
+        "label": "labels.downloadSourceFile",
+        "name": "downloadSourceFile",
         "perform": [Function],
         "predicate": [Function],
         "trackEvent": {

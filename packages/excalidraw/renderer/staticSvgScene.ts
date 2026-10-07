@@ -604,6 +604,27 @@ const renderElementToSvg = (
       }
       break;
     }
+    // v1: pdf elements export as a placeholder rectangle (PNG export goes
+    // through the canvas pipeline and renders the real page bitmap; SVG
+    // export of embedded page images is not needed yet)
+    case "pdf": {
+      const rect = svgRoot.ownerDocument.createElementNS(SVG_NS, "rect");
+      rect.setAttribute(
+        "transform",
+        `translate(${offsetX || 0} ${
+          offsetY || 0
+        }) rotate(${degree} ${cx} ${cy})`,
+      );
+      rect.setAttribute("width", `${element.width}px`);
+      rect.setAttribute("height", `${element.height}px`);
+      rect.setAttribute(
+        "fill",
+        renderConfig.theme === THEME.DARK ? "#2E2E2E" : "#E7E7E7",
+      );
+      rect.setAttribute("opacity", `${opacity}`);
+      addToRoot(rect, element);
+      break;
+    }
     // frames are not rendered and only acts as a container
     case "frame":
     case "magicframe": {

@@ -99,16 +99,30 @@ export class FileManager {
     const addedFiles: Map<FileId, BinaryFileData> = new Map();
 
     for (const element of elements) {
-      const fileData =
-        isInitializedImageElement(element) && files[element.fileId];
+      // media-import sources (PDF/video embeddables) reference their file via
+      // customData.sourceFile.fileId — persist those too, or the source is
+      // lost on refresh (FileManager only tracks image-element fileIds)
+      const fileIds: FileId[] = [];
+      if (isInitializedImageElement(element)) {
+        fileIds.push(element.fileId);
+      }
+      const sourceFileId = (
+        element.customData?.sourceFile as { fileId?: FileId } | undefined
+      )?.fileId;
+      if (sourceFileId) {
+        fileIds.push(sourceFileId);
+      }
 
-      if (
-        fileData &&
-        // NOTE if errored during save, won't retry due to this check
-        !this.isFileSavedOrBeingSaved(fileData)
-      ) {
-        addedFiles.set(element.fileId, files[element.fileId]);
-        this.savingFiles.set(element.fileId, this.getFileVersion(fileData));
+      for (const fileId of fileIds) {
+        const fileData = files[fileId];
+        if (
+          fileData &&
+          // NOTE if errored during save, won't retry due to this check
+          !this.isFileSavedOrBeingSaved(fileData)
+        ) {
+          addedFiles.set(fileId, fileData);
+          this.savingFiles.set(fileId, this.getFileVersion(fileData));
+        }
       }
     }
 

@@ -140,6 +140,7 @@ export type ActionName =
   | "linkToElement"
   | "cropEditor"
   | "downloadOriginalImage"
+  | "downloadSourceFile"
   | "exportHighestQualityPng"
   | "exportPdf"
   | "convertToLinked"

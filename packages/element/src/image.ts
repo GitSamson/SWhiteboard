@@ -2,7 +2,9 @@
 // ExcalidrawImageElement & related helpers
 // -----------------------------------------------------------------------------
 
-import { MIME_TYPES, SVG_NS } from "@excalidraw/common";
+import { IMAGE_MIME_TYPES, MIME_TYPES, SVG_NS } from "@excalidraw/common";
+
+import type { ValueOf } from "@excalidraw/common/utility-types";
 
 import type {
   AppClassProperties,
@@ -30,6 +32,15 @@ export const loadHTMLImageElement = (dataURL: DataURL) => {
     image.src = dataURL;
   });
 };
+
+const IMAGE_MIME_TYPE_VALUES = Object.values(IMAGE_MIME_TYPES) as string[];
+
+/** narrows BinaryFileData.mimeType (which also admits PDF/video sources) to
+ * the image mime types the render cache can decode */
+const isImageMimeType = (
+  mimeType: BinaryFiles[string]["mimeType"],
+): mimeType is ValueOf<typeof IMAGE_MIME_TYPES> =>
+  IMAGE_MIME_TYPE_VALUES.includes(mimeType);
 
 /**
  * Optional resolver injected by the app-layer "linked file assets" feature.
@@ -165,7 +176,7 @@ export const updateImageCache = async ({
         return promises.concat(
           (async () => {
             try {
-              if (fileData.mimeType === MIME_TYPES.binary) {
+              if (!isImageMimeType(fileData.mimeType)) {
                 throw new Error("Only images can be added to ImageCache");
               }
 

@@ -52,6 +52,9 @@
     "build:preview": "yarn build && vite preview --port 5000"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^1.0.0",
+    "ffmpeg-static": "5.3.0",
+    "pdfjs-dist": "6.3.289",
     "vite-plugin-sitemap": "0.7.1"
   }
 }

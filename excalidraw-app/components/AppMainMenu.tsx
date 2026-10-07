@@ -3,6 +3,7 @@ import {
   ExcalLogo,
   eyeIcon,
   ImageIcon,
+  downloadIcon,
 } from "@excalidraw/excalidraw/components/icons";
 import { useI18n } from "@excalidraw/excalidraw/i18n";
 import { MainMenu } from "@excalidraw/excalidraw/index";
@@ -25,6 +26,10 @@ export const AppMainMenu: React.FC<{
   refresh: () => void;
   /** when defined, shows the "create sync frame" item (linked file assets) */
   onCreateSyncFrame?: () => void;
+  /** when defined, shows the "import PDF" item (media import) */
+  onImportPdf?: () => void;
+  /** when defined, shows the "import video" item (media import) */
+  onImportVideo?: () => void;
 }> = React.memo((props) => {
   const { t } = useI18n();
   return (
@@ -49,6 +54,22 @@ export const AppMainMenu: React.FC<{
           onSelect={() => props.onCreateSyncFrame!()}
         >
           {t("labels.createSyncFrame")}
+        </MainMenu.Item>
+      )}
+      {props.onImportPdf && (
+        <MainMenu.Item
+          icon={downloadIcon}
+          onSelect={() => props.onImportPdf!()}
+        >
+          {t("mediaImport.importPdf")}
+        </MainMenu.Item>
+      )}
+      {props.onImportVideo && (
+        <MainMenu.Item
+          icon={downloadIcon}
+          onSelect={() => props.onImportVideo!()}
+        >
+          {t("mediaImport.importVideo")}
         </MainMenu.Item>
       )}
       <MainMenu.Separator />

@@ -21,6 +21,7 @@ import {
   newImageElement,
   newLinearElement,
   newMagicFrameElement,
+  newPdfElement,
   newTextElement,
 } from "@excalidraw/element";
 
@@ -371,6 +372,14 @@ export class API {
           fileId: (rest.fileId as string as FileId) ?? null,
           status: rest.status || "saved",
           scale: rest.scale || [1, 1],
+        });
+        break;
+      case "pdf":
+        element = newPdfElement({
+          ...base,
+          width,
+          height,
+          type: "pdf",
         });
         break;
       case "frame":

@@ -208,6 +208,7 @@
     "linkedImageFolder": "链接文件夹",
     "exportHighestQualityPng": "导出最高清 PNG（原图级）",
     "exportPdf": "导出 PDF（内嵌原图）",
+    "downloadSourceFile": "下载源文件",
     "linkedOriginalsUnavailable": "{{count}} 张链接图片无法读取原图（文件夹未授权），已按缩略图导出"
   },
   "elementLink": {
@@ -371,6 +372,7 @@
     "frame": "画框",
     "magicframe": "线框图至代码",
     "embeddable": "嵌入网页",
+    "pdf": "PDF",
     "selection": "选择",
     "iframe": "IFrame"
   },
@@ -787,5 +789,22 @@
     "relinkBanner": "文件夹 \"{{name}}\" 未在此设备上关联",
     "reconnectButton": "重新连接",
     "relinkButton": "重新关联文件夹"
+  },
+  "mediaImport": {
+    "importPdf": "导入 PDF…",
+    "importVideo": "导入视频…",
+    "extractPage": "提取本页",
+    "expandPages": "展开页面",
+    "pageOf": "{{current}} / {{total}}",
+    "pageFrom": "起",
+    "pageTo": "止",
+    "expand": "展开",
+    "captureFrame": "截帧",
+    "videoUnsupported": "当前浏览器无法解码此视频的编码（如 HEVC/H.265）。源文件已保留在场景中，可右键下载源文件。",
+    "transcoding": "正在服务器转码…",
+    "transcodeButton": "转码后播放",
+    "legacyPdfEmbed": "旧版 PDF 嵌入 — 请重新导入文件以使用内置 PDF 渲染。",
+    "downloadSource": "下载源文件",
+    "loadError": "文件加载失败"
   }
 }

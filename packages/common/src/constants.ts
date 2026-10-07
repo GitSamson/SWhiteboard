@@ -268,6 +268,11 @@ export const MIME_TYPES = {
   binary: "application/octet-stream",
   // image
   ...IMAGE_MIME_TYPES,
+  // PDF / video source files (imported, stored in BinaryFiles as base64)
+  pdf: "application/pdf",
+  videoMp4: "video/mp4",
+  videoWebm: "video/webm",
+  videoQuickTime: "video/quicktime",
 } as const;
 
 export const ALLOWED_PASTE_MIME_TYPES = [

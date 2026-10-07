@@ -43,6 +43,7 @@ import type {
   ExcalidrawTextContainer,
   ExcalidrawFrameElement,
   ExcalidrawEmbeddableElement,
+  ExcalidrawPdfElement,
   ExcalidrawMagicFrameElement,
   ExcalidrawIframeElement,
   ElementsMap,
@@ -181,6 +182,19 @@ export const newIframeElement = (
 ): NonDeleted<ExcalidrawIframeElement> => {
   return {
     ..._newElementBase<ExcalidrawIframeElement>("iframe", opts),
+  };
+};
+
+export const newPdfElement = (
+  opts: {
+    type: "pdf";
+  } & ElementConstructorOpts,
+): NonDeleted<ExcalidrawPdfElement> => {
+  return {
+    ..._newElementBase<ExcalidrawPdfElement>("pdf", opts),
+    // like images, pdf elements paint their own background (the page
+    // bitmap or a placeholder), so no rough.js stroke by default
+    strokeColor: "transparent",
   };
 };
 

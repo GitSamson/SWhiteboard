@@ -880,4 +880,70 @@ describe("contextMenu element", () => {
       expect.objectContaining({ id: rectangle2.id }),
     ]);
   });
+
+  it("shows 'Download source file' for elements with a sourceFile ref and downloads it", async () => {
+    const embeddable = API.createElement({
+      type: "embeddable",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+    });
+    Object.assign(embeddable, {
+      customData: {
+        sourceFile: { fileId: "srcFile1", kind: "pdf", name: "report" },
+      },
+    });
+    API.setElements([embeddable]);
+    API.setSelectedElements([embeddable]);
+
+    h.app.files["srcFile1" as any] = {
+      mimeType: "application/pdf",
+      id: "srcFile1",
+      dataURL: "data:application/pdf;base64,JVBERi0=",
+      created: Date.now(),
+      lastRetrieved: Date.now(),
+    } as any;
+
+    fireEvent.contextMenu(GlobalTestState.interactiveCanvas, {
+      button: 2,
+      clientX: 50,
+      clientY: 50,
+    });
+
+    const contextMenu = UI.queryContextMenu();
+    expect(contextMenu).not.toBeNull();
+    const menuItem = contextMenu?.querySelector(
+      'li[data-testid="downloadSourceFile"]',
+    );
+    expect(menuItem).not.toBeNull();
+
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+    fireEvent.click(menuItem!);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    const anchor = clickSpy.mock.instances[0] as unknown as HTMLAnchorElement;
+    expect(anchor.download).toBe("report.pdf");
+    expect(anchor.href).toBe("data:application/pdf;base64,JVBERi0=");
+    clickSpy.mockRestore();
+  });
+
+  it("does not show 'Download source file' for elements without a sourceFile ref", () => {
+    UI.clickTool("rectangle");
+    mouse.down(0, 0);
+    mouse.up(10, 10);
+
+    fireEvent.contextMenu(GlobalTestState.interactiveCanvas, {
+      button: 2,
+      clientX: 3,
+      clientY: 3,
+    });
+
+    const contextMenu = UI.queryContextMenu();
+    expect(contextMenu).not.toBeNull();
+    expect(
+      contextMenu?.querySelector('li[data-testid="downloadSourceFile"]'),
+    ).toBeNull();
+  });
 });

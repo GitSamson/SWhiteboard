@@ -10,6 +10,7 @@ import type {
   ExcalidrawElement,
   ExcalidrawTextElement,
   ExcalidrawEmbeddableElement,
+  ExcalidrawPdfElement,
   ExcalidrawLinearElement,
   ExcalidrawBindableElement,
   ExcalidrawFreeDrawElement,
@@ -47,6 +48,12 @@ export const isEmbeddableElement = <T extends ExcalidrawElement>(
   element: T | null | undefined,
 ): element is T & ExcalidrawEmbeddableElement => {
   return !!element && element.type === "embeddable";
+};
+
+export const isPdfElement = <T extends ExcalidrawElement>(
+  element: T | null | undefined,
+): element is T & ExcalidrawPdfElement => {
+  return !!element && element.type === "pdf";
 };
 
 export const isIframeElement = <T extends ExcalidrawElement>(
@@ -185,6 +192,7 @@ export const isBindableElement = <T extends ExcalidrawElement>(
       element.type === "diamond" ||
       element.type === "ellipse" ||
       element.type === "image" ||
+      element.type === "pdf" ||
       element.type === "iframe" ||
       element.type === "embeddable" ||
       element.type === "frame" ||
@@ -201,6 +209,7 @@ export const isRectanguloidElement = <T extends ExcalidrawElement>(
     (element.type === "rectangle" ||
       element.type === "diamond" ||
       element.type === "image" ||
+      element.type === "pdf" ||
       element.type === "iframe" ||
       element.type === "embeddable" ||
       element.type === "frame" ||
@@ -218,6 +227,7 @@ export const isRectangularElement = <T extends ExcalidrawElement>(
     element != null &&
     (element.type === "rectangle" ||
       element.type === "image" ||
+      element.type === "pdf" ||
       element.type === "text" ||
       element.type === "iframe" ||
       element.type === "embeddable" ||
@@ -261,6 +271,7 @@ export const isExcalidrawElement = (
     case "frame":
     case "magicframe":
     case "image":
+    case "pdf":
     case "selection": {
       return true;
     }
@@ -310,7 +321,8 @@ export const isUsingAdaptiveRadius = (type: string) =>
   type === "rectangle" ||
   type === "embeddable" ||
   type === "iframe" ||
-  type === "image";
+  type === "image" ||
+  type === "pdf";
 
 export const isUsingProportionalRadius = (type: string) =>
   type === "line" || type === "arrow" || type === "diamond";
@@ -404,6 +416,7 @@ export const isEligibleFrameChildType = (type: ElementOrToolType) => {
     case "freedraw":
     case "text":
     case "image":
+    case "pdf":
     case "frame":
     case "embeddable": {
       return true;

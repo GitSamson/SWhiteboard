@@ -66,6 +66,14 @@ import {
 import { getContainingFrame } from "./frame";
 import { getCornerRadius } from "./utils";
 
+import {
+  clearPdfPlaceholderPending,
+  getPdfPageImage,
+  markPdfPlaceholderPending,
+  notifyPdfPageMiss,
+  pdfPageKey,
+} from "./pdfPages";
+
 import { ShapeCache } from "./shape";
 
 import type {
@@ -487,6 +495,60 @@ const drawElementOnCanvas = (
       context.restore();
       break;
     }
+    case "pdf": {
+      context.save();
+
+      const sourceFile = element.customData?.sourceFile as
+        | { fileId?: string; currentPage?: number }
+        | undefined;
+      const img =
+        sourceFile?.fileId != null
+          ? getPdfPageImage(
+              pdfPageKey(sourceFile.fileId, sourceFile.currentPage ?? 1),
+            )
+          : null;
+
+      if (img) {
+        // fill the element box with the current page bitmap; aspect is
+        // fixed at import time (height = width × page ratio)
+        clearPdfPlaceholderPending(element.id);
+        context.drawImage(img, 0, 0, element.width, element.height);
+      } else {
+        // placeholder until the app fetches the page bitmap — tell it to
+        // start right from the render (no-op during export: nothing to fetch)
+        markPdfPlaceholderPending(element.id);
+        if (!renderConfig.isExporting && sourceFile?.fileId != null) {
+          notifyPdfPageMiss(sourceFile.fileId, sourceFile.currentPage ?? 1);
+        }
+
+        // loading placeholder: gray box + spinner ring until the app fetches
+        // the page bitmap and invalidates the render cache
+        context.fillStyle =
+          renderConfig.theme === THEME.DARK ? "#2E2E2E" : "#E7E7E7";
+        context.fillRect(0, 0, element.width, element.height);
+
+        const fontSize = Math.max(
+          10,
+          Math.min(24, Math.min(element.width, element.height) / 4),
+        );
+        const cx = element.width / 2;
+        const cy = element.height / 2 - fontSize * 0.6;
+        context.strokeStyle = "#868e96";
+        context.lineWidth = Math.max(2, fontSize / 8);
+        context.beginPath();
+        context.arc(cx, cy, fontSize * 0.75, -Math.PI / 2, Math.PI * 1.15);
+        context.stroke();
+
+        context.fillStyle = "#868e96";
+        context.font = `${fontSize}px sans-serif`;
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText("PDF", cx, element.height / 2 + fontSize);
+      }
+
+      context.restore();
+      break;
+    }
     default: {
       if (isTextElement(element)) {
         const rtl = isRTL(element.text);
@@ -864,6 +926,7 @@ export const renderElement = (
     case "line":
     case "arrow":
     case "image":
+    case "pdf":
     case "text":
     case "iframe":
     case "embeddable": {

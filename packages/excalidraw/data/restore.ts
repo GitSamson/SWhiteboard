@@ -701,6 +701,7 @@ export const restoreElement = (
     case "diamond":
     case "iframe":
     case "embeddable":
+    case "pdf":
       return restoreElementWithProperties(element, {});
     case "magicframe":
     case "frame":

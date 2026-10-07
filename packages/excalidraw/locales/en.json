@@ -208,6 +208,7 @@
     "linkedImageFolder": "Linked folder",
     "exportHighestQualityPng": "Export as high-quality PNG",
     "exportPdf": "Export as PDF (original images)",
+    "downloadSourceFile": "Download source file",
     "linkedOriginalsUnavailable": "{{count}} linked image(s) unavailable (folder not authorized), exported as thumbnails"
   },
   "elementLink": {
@@ -371,6 +372,7 @@
     "frame": "Frame",
     "magicframe": "Wireframe to code",
     "embeddable": "Web Embed",
+    "pdf": "PDF",
     "selection": "Selection",
     "iframe": "IFrame"
   },
@@ -787,5 +789,23 @@
     "relinkBanner": "Folder \"{{name}}\" is not linked on this device",
     "reconnectButton": "Reconnect",
     "relinkButton": "Relink folder"
+  },
+  "mediaImport": {
+    "importPdf": "Import PDF…",
+    "importVideo": "Import video…",
+    "extractPage": "Extract page",
+    "expandPages": "Expand pages",
+    "pageOf": "{{current}} / {{total}}",
+    "pageFrom": "From",
+    "pageTo": "To",
+    "expand": "Expand",
+    "captureFrame": "Capture frame",
+    "videoUnsupported": "This browser can't decode this video codec (e.g. HEVC/H.265). The source file is kept in the scene — download it via right-click.",
+    "transcoding": "Transcoding on server…",
+    "transcodeButton": "Transcode",
+    "legacyPdfEmbed":
+      "Legacy PDF embed — re-import the file to use the built-in PDF renderer.",
+    "downloadSource": "Download source file",
+    "loadError": "Failed to load the file"
   }
 }

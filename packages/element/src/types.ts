@@ -102,6 +102,17 @@ export type ExcalidrawEmbeddableElement = _ExcalidrawElementBase &
     type: "embeddable";
   }>;
 
+export type ExcalidrawPdfElement = _ExcalidrawElementBase &
+  Readonly<{
+    type: "pdf";
+    /**
+     * PDF state lives in `customData.sourceFile`
+     * ({ fileId, kind: "pdf", name, pageCount, currentPage }); the element
+     * itself has no fileId. Page bitmaps are provided app-side via the
+     * pdf-page bridge (`pdfPages.ts`).
+     */
+  }>;
+
 export type MagicGenerationData =
   | {
       status: "pending";
@@ -191,6 +202,7 @@ export type ExcalidrawFlowchartNodeElement =
 export type ExcalidrawRectanguloidElement =
   | ExcalidrawRectangleElement
   | ExcalidrawImageElement
+  | ExcalidrawPdfElement
   | ExcalidrawTextElement
   | ExcalidrawFreeDrawElement
   | ExcalidrawIframeLikeElement
@@ -210,6 +222,7 @@ export type ExcalidrawElement =
   | ExcalidrawArrowElement
   | ExcalidrawFreeDrawElement
   | ExcalidrawImageElement
+  | ExcalidrawPdfElement
   | ExcalidrawFrameElement
   | ExcalidrawMagicFrameElement
   | ExcalidrawIframeElement
@@ -262,6 +275,7 @@ export type ExcalidrawBindableElement =
   | ExcalidrawEllipseElement
   | ExcalidrawTextElement
   | ExcalidrawImageElement
+  | ExcalidrawPdfElement
   | ExcalidrawIframeElement
   | ExcalidrawEmbeddableElement
   | ExcalidrawFrameElement

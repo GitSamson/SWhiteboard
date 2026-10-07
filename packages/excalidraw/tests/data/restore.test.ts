@@ -43,6 +43,37 @@ describe("restoreElements", () => {
     expect(restoredElements.length).toBe(elements.length);
   });
 
+  it("round-trips pdf elements including customData.sourceFile", () => {
+    const pdfElement = {
+      ...API.createElement({
+        type: "pdf",
+        width: 480,
+        height: 640,
+      }),
+      customData: {
+        sourceFile: {
+          fileId: "file-id" as any,
+          kind: "pdf",
+          name: "doc.pdf",
+          pageCount: 3,
+          currentPage: 2,
+        },
+      },
+    };
+
+    const [restored] = restore.restoreElements([pdfElement], null);
+    expect(restored.type).toBe("pdf");
+    expect(restored.width).toBe(480);
+    expect(restored.height).toBe(640);
+    expect(restored.customData?.sourceFile).toEqual({
+      fileId: "file-id",
+      kind: "pdf",
+      name: "doc.pdf",
+      pageCount: 3,
+      currentPage: 2,
+    });
+  });
+
   it("when imported data state is null it should return an empty array of elements", () => {
     const restoredElements = restore.restoreElements(null, null);
     expect(restoredElements.length).toBe(0);

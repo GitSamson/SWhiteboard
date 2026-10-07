@@ -143,6 +143,7 @@ import {
   isBoundToContainer,
   isFrameLikeElement,
   isImageElement,
+  isPdfElement,
   isEmbeddableElement,
   isInitializedImageElement,
   isLinearElement,
@@ -326,6 +327,7 @@ import {
   actionToggleMidpointSnapping,
   actionToggleCropEditor,
   actionDownloadOriginalImage,
+  actionDownloadSourceFile,
   actionExportHighestQualityPng,
   actionExportPdf,
   actionConvertToLinked,
@@ -515,6 +517,18 @@ import type { Action, ActionResult } from "../actions/types";
 
 const AppContext = React.createContext<AppClassProperties>(null!);
 const AppPropsContext = React.createContext<AppProps>(null!);
+
+/**
+ * Media elements keep their aspect ratio on resize by default (Shift = free
+ * resize): raster images, pdf elements and imported video embeddables — a
+ * distorted video/pdf page is never desirable.
+ */
+const shouldLockAspectByDefault = (element: ExcalidrawElement): boolean =>
+  isImageElement(element) ||
+  isPdfElement(element) ||
+  (isEmbeddableElement(element) &&
+    (element.customData?.sourceFile as { kind?: string } | undefined)?.kind ===
+      "video");
 
 const editorInterfaceContextInitialValue: EditorInterface = {
   formFactor: "desktop",
@@ -13213,6 +13227,23 @@ class App extends React.Component<AppProps, AppState> {
       .map((data) => data.file)
       .filter((file) => isSupportedImageFile(file));
 
+    if (this.props.onDropFiles) {
+      const pos = { x: sceneX, y: sceneY };
+      const droppedFiles = fileItems
+        .map((data) => data.file)
+        .filter((file): file is File => !!file);
+      let handled = false;
+      try {
+        handled = await this.props.onDropFiles(droppedFiles, pos);
+      } catch (error) {
+        // host handler failed — fall through to the default behavior below
+        console.warn("onDropFiles handler threw", error);
+      }
+      if (handled) {
+        return;
+      }
+    }
+
     if (imageFiles.length > 0 && this.isToolSupported("image")) {
       return this.insertImages(imageFiles, sceneX, sceneY, "drop");
     }
@@ -13541,7 +13572,7 @@ class App extends React.Component<AppProps, AppState> {
         y: gridY,
         width: distance(pointerDownState.originInGrid.x, gridX),
         height: distance(pointerDownState.originInGrid.y, gridY),
-        shouldMaintainAspectRatio: isImageElement(newElement)
+        shouldMaintainAspectRatio: shouldLockAspectByDefault(newElement)
           ? !shouldMaintainAspectRatio(event)
           : shouldMaintainAspectRatio(event),
         shouldResizeFromCenter: shouldResizeFromCenter(event),
@@ -13765,7 +13796,7 @@ class App extends React.Component<AppProps, AppState> {
         this.scene,
         shouldRotateWithDiscreteAngle(event),
         shouldResizeFromCenter(event),
-        selectedElements.some((element) => isImageElement(element))
+        selectedElements.some((element) => shouldLockAspectByDefault(element))
           ? !shouldMaintainAspectRatio(event)
           : shouldMaintainAspectRatio(event),
         resizeX,
@@ -13875,6 +13906,7 @@ class App extends React.Component<AppProps, AppState> {
       CONTEXT_MENU_SEPARATOR,
       actionToggleCropEditor,
       actionDownloadOriginalImage,
+      actionDownloadSourceFile,
       actionExportHighestQualityPng,
       actionExportPdf,
       actionConvertToLinked,
