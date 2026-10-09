@@ -115,7 +115,11 @@ import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
 import { PdfEmbedWidget } from "./pdf/PdfEmbedWidget";
 import { PdfToolbarHost } from "./pdf/PdfToolbarHost";
 import { importPdfFile } from "./pdf/pdfImport";
-import { ensurePdfPage, registerPdfPageBridge } from "./pdf/pdfPageCache";
+import {
+  ensurePdfPage,
+  registerPdfPageBridge,
+  startPdfHealLoop,
+} from "./pdf/pdfPageCache";
 import { publishPdfSelection } from "./pdf/pdfSelectionStore";
 import { MediaToolbarItems } from "./media/MediaToolbarItems";
 import { pickFile } from "./media/filePicker";
@@ -416,12 +420,14 @@ const ExcalidrawWrapper = () => {
   const debugCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // wire the pdf page cache into the library's render bridge once the API is
-  // up (the miss handler needs it to start fetches from render misses)
+  // up (the miss handler needs it to start fetches from render misses); the
+  // heal loop then converges any placeholder the event-driven paths missed
   useEffect(() => {
     if (!excalidrawAPI) {
       return;
     }
     registerPdfPageBridge(excalidrawAPI);
+    return startPdfHealLoop(excalidrawAPI);
   }, [excalidrawAPI]);
 
   // Re-hydrate pdf page bitmaps whenever pdf elements are in the scene. After

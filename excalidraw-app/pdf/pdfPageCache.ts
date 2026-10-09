@@ -11,7 +11,7 @@
  */
 
 import {
-  clearPdfPlaceholderPending,
+  CaptureUpdateAction,
   elementWithCanvasCache,
   isPdfPlaceholderPending,
   pdfPageKey,
@@ -139,9 +139,15 @@ const RETRY_BACKOFF_MS = 30_000;
 const failedAt = new Map<PdfPageKey, number>();
 
 /**
- * Invalidate every STALE-PLACEHOLDER scene element bound to `fileId` and
- * force a re-render. Elements whose latest draw already used the page bitmap
- * are skipped (no wasteful refresh); the pending flag is how we tell.
+ * Invalidate the render cache of every STALE-PLACEHOLDER scene element bound
+ * to `fileId` and force a re-render. Elements whose latest draw already used
+ * the page bitmap are skipped (no wasteful refresh).
+ *
+ * The pending flag is deliberately NOT cleared here: the heal refresh can be
+ * dropped by React (update scheduled from an impure context), and if the flag
+ * were cleared the element would never be retried — gray forever. The flag
+ * only clears when a draw actually paints the bitmap (renderElement hit
+ * branch), so a lost refresh self-heals on the next heal-loop tick.
  */
 const healFile = (
   excalidrawAPI: ExcalidrawImperativeAPI,
@@ -155,13 +161,26 @@ const healFile = (
     ) {
       ShapeCache.delete(el);
       elementWithCanvasCache.delete(el);
-      clearPdfPlaceholderPending(el.id);
       healed = true;
     }
   }
   if (healed) {
     console.info(`[pdf] ${fileId}: healed placeholder elements`);
-    excalidrawAPI.refresh();
+    // excalidrawAPI.refresh() is NOT enough here: it setStates identical
+    // canvas offsets, and StaticCanvas is React.memo'd on
+    // canvasNonce/elementsMap/appState — with nothing changed the memo blocks
+    // the re-render, the painting effect never runs, and the invalidated
+    // placeholder canvas stays on screen (gray forever after a page refresh,
+    // where no other scene change ever bumps the nonce). This no-op scene
+    // update bumps the scene nonce that canvasNonce derives from, forcing a
+    // real repaint. captureUpdate NEVER keeps it out of undo history; the
+    // resulting onChange short-circuits in the hydration handler (memory
+    // hit → return, no loop), and scene-replace detection sees identical
+    // element objects, so the linked-assets verifier stays quiet.
+    excalidrawAPI.updateScene({
+      elements: [...excalidrawAPI.getSceneElementsIncludingDeleted()],
+      captureUpdate: CaptureUpdateAction.NEVER,
+    });
   }
 };
 
@@ -179,9 +198,11 @@ export const ensurePdfPageForFile = async (
 ): Promise<void> => {
   const key = pdfPageKey(fileId, page);
   if (imageCache.has(key)) {
-    // bitmap already here — but if some element still shows a placeholder
-    // canvas (its heal refresh was lost earlier), heal it now
-    healFile(excalidrawAPI, fileId);
+    // NOTE: no healing on the memory-hit path. This function is also called
+    // from the onChange hydration chain — healing here (invalidate caches +
+    // refresh) re-triggers onChange → ensure → heal → refresh, an infinite
+    // loop that hits React's maximum update depth. Healing lost-refresh
+    // placeholders is the heal loop's job (timer context, 1.5s spacing).
     return;
   }
   const failed = failedAt.get(key);
@@ -195,20 +216,23 @@ export const ensurePdfPageForFile = async (
 
   const task = (async () => {
     try {
-      const dataURL = excalidrawAPI.getFiles()[fileId as FileId]?.dataURL;
-      if (!dataURL) {
-        // BinaryFiles may still be restoring — the next render miss retries
-        console.info(`[pdf] ${key}: source file not restored yet`);
-        return;
-      }
-
       // persistent cache first: pages visited in a previous session redraw
-      // instantly, no server round-trip
+      // instantly, no server round-trip. Deliberately BEFORE the source-file
+      // check — the IDB page bitmap doesn't need the PDF bytes, so this works
+      // even while BinaryFiles are still restoring after a page refresh (the
+      // "source file not restored yet" window that used to leave pages gray).
       const stored = await readPdfPage(key);
       if (stored) {
         console.info(`[pdf] ${key}: IDB cache hit`);
         imageCache.set(key, await blobToImage(await dataUrlToBlob(stored)));
         healFile(excalidrawAPI, fileId);
+        return;
+      }
+
+      const dataURL = excalidrawAPI.getFiles()[fileId as FileId]?.dataURL;
+      if (!dataURL) {
+        // BinaryFiles may still be restoring — the next render miss retries
+        console.info(`[pdf] ${key}: source file not restored yet`);
         return;
       }
 
@@ -256,4 +280,45 @@ export const ensurePdfPage = async (
     return;
   }
   return ensurePdfPageForFile(excalidrawAPI, sourceFile.fileId, page);
+};
+
+/**
+ * Convergence loop of last resort: event-driven triggers (render miss,
+ * scene-change hydration) cover the fast paths, but each can miss the
+ * startup window exactly once — leaving the page visible at refresh stuck
+ * on a placeholder forever with no further event to retrigger it. Every
+ * interval tick heals any element still showing a placeholder: bitmap in
+ * memory → invalidate & re-render; missing → (re)start the fetch. Once
+ * everything is healed the loop is a cheap no-op scan.
+ */
+export const startPdfHealLoop = (
+  excalidrawAPI: ExcalidrawImperativeAPI,
+): (() => void) => {
+  const HEAL_INTERVAL_MS = 1500;
+  const timer = setInterval(() => {
+    for (const el of excalidrawAPI.getSceneElementsIncludingDeleted()) {
+      if (
+        el.type === "pdf" &&
+        !el.isDeleted &&
+        isPdfPlaceholderPending(el.id)
+      ) {
+        const sourceFile = el.customData?.sourceFile as
+          | PdfSourceFileMeta
+          | undefined;
+        if (sourceFile?.fileId) {
+          const page = sourceFile.currentPage ?? 1;
+          if (imageCache.has(pdfPageKey(sourceFile.fileId, page))) {
+            // bitmap is cached but the element still shows a placeholder (its
+            // heal repaint was lost). Heal DIRECTLY from this timer context —
+            // delegating to ensurePdfPageForFile would short-circuit on the
+            // memory hit without healing, leaving the page gray forever.
+            healFile(excalidrawAPI, sourceFile.fileId);
+          } else {
+            void ensurePdfPageForFile(excalidrawAPI, sourceFile.fileId, page);
+          }
+        }
+      }
+    }
+  }, HEAL_INTERVAL_MS);
+  return () => clearInterval(timer);
 };
