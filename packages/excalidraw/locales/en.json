@@ -799,6 +799,8 @@
     "pageFrom": "From",
     "pageTo": "To",
     "expand": "Expand",
+    "hiRes": "HD preview",
+    "hiResHint": "Rasterize pages at higher resolution; extract/expand uses HD too",
     "captureFrame": "Capture frame",
     "videoUnsupported": "This browser can't decode this video codec (e.g. HEVC/H.265). The source file is kept in the scene — download it via right-click.",
     "transcoding": "Transcoding on server…",

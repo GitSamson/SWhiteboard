@@ -14,7 +14,7 @@ import { useI18n } from "@excalidraw/excalidraw/i18n";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 import { fetchPdfPage, openPdfData } from "./pdfPageCache";
-import { turnPdfPage } from "./pdfNavigation";
+import { togglePdfHiRes, turnPdfPage } from "./pdfNavigation";
 import { insertPageImages } from "./pdfPages";
 import { clampPageRange } from "./pageRange";
 
@@ -27,8 +27,10 @@ import type { PdfSourceFileMeta } from "./pdfImport";
 
 /** pages above this many ask for confirmation before expanding */
 const EXPAND_CONFIRM_THRESHOLD = 20;
-/** extracted page images render at this width (px) */
+/** extracted page images render at this width (px) in the SD tier */
 const EXTRACT_WIDTH_PX = 1440;
+/** extracted page images render at this width (px) in the HD tier */
+const EXTRACT_WIDTH_HD_PX = 2880;
 /** scene-units offset below the element where page images are inserted */
 const INSERT_OFFSET = 40;
 
@@ -84,7 +86,10 @@ export const PdfToolbarHost: React.FC<{
     try {
       const info = await openPdfData(dataURL);
       const page = sourceFile.currentPage ?? 1;
-      const blob = await fetchPdfPage(info.hash, page, EXTRACT_WIDTH_PX);
+      // extract follows the element's quality tier (HD preview → HD extract)
+      const width =
+        sourceFile.hiRes === true ? EXTRACT_WIDTH_HD_PX : EXTRACT_WIDTH_PX;
+      const blob = await fetchPdfPage(info.hash, page, width);
       await insertPageImages(
         [{ blob, pageNumber: page }],
         { x: element.x, y: element.y + element.height + INSERT_OFFSET },
@@ -122,8 +127,11 @@ export const PdfToolbarHost: React.FC<{
     try {
       const info = await openPdfData(dataURL);
       const pages = Array.from({ length: count }, (_, i) => start + i);
+      // extract follows the element's quality tier (HD preview → HD extract)
+      const width =
+        sourceFile.hiRes === true ? EXTRACT_WIDTH_HD_PX : EXTRACT_WIDTH_PX;
       const blobs = await mapWithConcurrency(pages, 4, async (pageNumber) => ({
-        blob: await fetchPdfPage(info.hash, pageNumber, EXTRACT_WIDTH_PX),
+        blob: await fetchPdfPage(info.hash, pageNumber, width),
         pageNumber,
       }));
       await insertPageImages(
@@ -146,6 +154,7 @@ export const PdfToolbarHost: React.FC<{
     | undefined;
   const page = sourceFile?.currentPage ?? 1;
   const pageCount = Math.max(1, sourceFile?.pageCount ?? 1);
+  const hiRes = sourceFile?.hiRes === true;
   const { scrollX, scrollY, zoom } = snapshot;
 
   const buttonStyle: React.CSSProperties = {
@@ -231,6 +240,19 @@ export const PdfToolbarHost: React.FC<{
           onClick={() => setShowExpand((prev) => !prev)}
         >
           {t("mediaImport.expandPages")}
+        </button>
+        <button
+          type="button"
+          title={t("mediaImport.hiResHint")}
+          style={{
+            ...buttonStyle,
+            background: hiRes ? "rgba(255, 255, 255, 0.2)" : "transparent",
+            fontWeight: hiRes ? 700 : 400,
+          }}
+          disabled={busy}
+          onClick={() => togglePdfHiRes(excalidrawAPI, element)}
+        >
+          {t("mediaImport.hiRes")}
         </button>
       </div>
       {showExpand && (

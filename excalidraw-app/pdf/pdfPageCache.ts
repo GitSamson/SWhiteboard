@@ -41,6 +41,10 @@ export interface PdfOpenInfo {
   pages: PdfOpenPage[];
 }
 
+/** preview rasterization widths per quality tier (px) */
+export const PREVIEW_WIDTH_SD = 1200;
+export const PREVIEW_WIDTH_HD = 2400;
+
 const imageCache = new Map<PdfPageKey, HTMLImageElement>();
 const inflight = new Map<PdfPageKey, Promise<void>>();
 /** /api/pdf-open results, keyed by the BinaryFiles dataURL */
@@ -57,8 +61,11 @@ export const registerPdfPageBridge = (
   // cycle and React discards updates scheduled from there ("An update was
   // scheduled from inside an update function") — which silently kills the
   // heal re-render. A macrotask detaches us completely.
-  setPdfPageMissHandler((fileId, page) => {
-    setTimeout(() => void ensurePdfPageForFile(excalidrawAPI, fileId, page), 0);
+  setPdfPageMissHandler((fileId, page, hiRes) => {
+    setTimeout(
+      () => void ensurePdfPageForFile(excalidrawAPI, fileId, page, hiRes),
+      0,
+    );
   });
 };
 
@@ -100,7 +107,7 @@ export const openPdfData = async (dataURL: string): Promise<PdfOpenInfo> => {
 export const fetchPdfPage = async (
   hash: string,
   page: number,
-  width = 1200,
+  width = PREVIEW_WIDTH_SD,
 ): Promise<Blob> => {
   const params = new URLSearchParams({
     hash,
@@ -195,8 +202,9 @@ export const ensurePdfPageForFile = async (
   excalidrawAPI: ExcalidrawImperativeAPI,
   fileId: string,
   page: number,
+  hiRes = false,
 ): Promise<void> => {
-  const key = pdfPageKey(fileId, page);
+  const key = pdfPageKey(fileId, page, hiRes);
   if (imageCache.has(key)) {
     // NOTE: no healing on the memory-hit path. This function is also called
     // from the onChange hydration chain — healing here (invalidate caches +
@@ -241,7 +249,11 @@ export const ensurePdfPageForFile = async (
       if (page < 1 || page > info.pageCount) {
         return;
       }
-      const blob = await fetchPdfPage(info.hash, page);
+      const blob = await fetchPdfPage(
+        info.hash,
+        page,
+        hiRes ? PREVIEW_WIDTH_HD : PREVIEW_WIDTH_SD,
+      );
       imageCache.set(key, await blobToImage(blob));
       console.info(`[pdf] ${key}: server page decoded, healing`);
       // persist for instant redraws after refresh (current + prefetched
@@ -279,7 +291,12 @@ export const ensurePdfPage = async (
   if (!sourceFile?.fileId) {
     return;
   }
-  return ensurePdfPageForFile(excalidrawAPI, sourceFile.fileId, page);
+  return ensurePdfPageForFile(
+    excalidrawAPI,
+    sourceFile.fileId,
+    page,
+    sourceFile.hiRes === true,
+  );
 };
 
 /**
@@ -307,14 +324,20 @@ export const startPdfHealLoop = (
           | undefined;
         if (sourceFile?.fileId) {
           const page = sourceFile.currentPage ?? 1;
-          if (imageCache.has(pdfPageKey(sourceFile.fileId, page))) {
+          const hiRes = sourceFile.hiRes === true;
+          if (imageCache.has(pdfPageKey(sourceFile.fileId, page, hiRes))) {
             // bitmap is cached but the element still shows a placeholder (its
             // heal repaint was lost). Heal DIRECTLY from this timer context —
             // delegating to ensurePdfPageForFile would short-circuit on the
             // memory hit without healing, leaving the page gray forever.
             healFile(excalidrawAPI, sourceFile.fileId);
           } else {
-            void ensurePdfPageForFile(excalidrawAPI, sourceFile.fileId, page);
+            void ensurePdfPageForFile(
+              excalidrawAPI,
+              sourceFile.fileId,
+              page,
+              hiRes,
+            );
           }
         }
       }

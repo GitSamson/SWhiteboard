@@ -33,6 +33,13 @@ export interface PdfSourceFileMeta {
   name: string;
   pageCount: number;
   currentPage: number;
+  /**
+   * user toggle (toolbar): render/extract this document at the HD tier.
+   * Undefined/false = SD (default). Changes the page-bitmap cache key, so
+   * toggling re-fetches pages at the new width instead of reusing the
+   * other tier's bitmaps.
+   */
+  hiRes?: boolean;
 }
 
 export const PDF_ELEMENT_WIDTH = 480;

@@ -499,12 +499,13 @@ const drawElementOnCanvas = (
       context.save();
 
       const sourceFile = element.customData?.sourceFile as
-        | { fileId?: string; currentPage?: number }
+        | { fileId?: string; currentPage?: number; hiRes?: boolean }
         | undefined;
+      const hiRes = sourceFile?.hiRes === true;
       const img =
         sourceFile?.fileId != null
           ? getPdfPageImage(
-              pdfPageKey(sourceFile.fileId, sourceFile.currentPage ?? 1),
+              pdfPageKey(sourceFile.fileId, sourceFile.currentPage ?? 1, hiRes),
             )
           : null;
 
@@ -518,7 +519,11 @@ const drawElementOnCanvas = (
         // start right from the render (no-op during export: nothing to fetch)
         markPdfPlaceholderPending(element.id);
         if (!renderConfig.isExporting && sourceFile?.fileId != null) {
-          notifyPdfPageMiss(sourceFile.fileId, sourceFile.currentPage ?? 1);
+          notifyPdfPageMiss(
+            sourceFile.fileId,
+            sourceFile.currentPage ?? 1,
+            hiRes,
+          );
         }
 
         // loading placeholder: gray box + spinner ring until the app fetches

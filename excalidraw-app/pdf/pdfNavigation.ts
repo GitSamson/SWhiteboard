@@ -14,6 +14,42 @@ import { ensurePdfPage } from "./pdfPageCache";
 
 import type { PdfSourceFileMeta } from "./pdfImport";
 
+/**
+ * Toggles the HD preview tier (`customData.sourceFile.hiRes`) of a pdf
+ * element. Same NEVER-capture policy as page turns — it's a view setting,
+ * not a content edit. The quality tier is part of the page cache key, so the
+ * element's next render misses at the new tier, briefly shows the
+ * placeholder, and self-heals once the matching bitmap arrives (toggling
+ * back to SD hits the still-cached SD bitmaps instantly).
+ */
+export const togglePdfHiRes = (
+  excalidrawAPI: ExcalidrawImperativeAPI,
+  element: ExcalidrawPdfElement,
+): void => {
+  const sourceFile = element.customData?.sourceFile as
+    | PdfSourceFileMeta
+    | undefined;
+  if (!sourceFile) {
+    return;
+  }
+
+  const updated = newElementWith(element, {
+    customData: {
+      ...element.customData,
+      sourceFile: { ...sourceFile, hiRes: sourceFile.hiRes !== true },
+    },
+  });
+
+  excalidrawAPI.updateScene({
+    elements: excalidrawAPI
+      .getSceneElements()
+      .map((el) => (el.id === element.id ? updated : el)),
+    captureUpdate: CaptureUpdateAction.NEVER,
+  });
+
+  void ensurePdfPage(excalidrawAPI, updated, sourceFile.currentPage ?? 1);
+};
+
 export const turnPdfPage = (
   excalidrawAPI: ExcalidrawImperativeAPI,
   element: ExcalidrawPdfElement,

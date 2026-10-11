@@ -799,6 +799,8 @@
     "pageFrom": "起",
     "pageTo": "止",
     "expand": "展开",
+    "hiRes": "高清预览",
+    "hiResHint": "以更高分辨率渲染页面，提取/展开页面也会使用高清",
     "captureFrame": "截帧",
     "videoUnsupported": "当前浏览器无法解码此视频的编码（如 HEVC/H.265）。源文件已保留在场景中，可右键下载源文件。",
     "transcoding": "正在服务器转码…",

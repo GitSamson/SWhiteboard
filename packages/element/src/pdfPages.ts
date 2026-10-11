@@ -15,8 +15,12 @@ export type PdfPageKey = string;
 
 let pdfPageGetter: ((key: PdfPageKey) => HTMLImageElement | null) | null = null;
 
-/** app callback fired (synchronously, during render) on a page-image miss */
-let pdfPageMissHandler: ((fileId: string, page: number) => void) | null = null;
+/** app callback fired (synchronously, during render) on a page-image miss;
+ *  `hiRes` mirrors the element's `customData.sourceFile.hiRes` so the app can
+ *  fetch the matching quality tier */
+let pdfPageMissHandler:
+  | ((fileId: string, page: number, hiRes: boolean) => void)
+  | null = null;
 
 export const setPdfPageImageGetter = (
   getter: ((key: PdfPageKey) => HTMLImageElement | null) | null,
@@ -25,7 +29,7 @@ export const setPdfPageImageGetter = (
 };
 
 export const setPdfPageMissHandler = (
-  handler: ((fileId: string, page: number) => void) | null,
+  handler: ((fileId: string, page: number, hiRes: boolean) => void) | null,
 ): void => {
   pdfPageMissHandler = handler;
 };
@@ -34,8 +38,12 @@ export const getPdfPageImage = (key: PdfPageKey): HTMLImageElement | null =>
   pdfPageGetter ? pdfPageGetter(key) : null;
 
 /** call while painting a placeholder so the app can start the fetch */
-export const notifyPdfPageMiss = (fileId: string, page: number): void => {
-  pdfPageMissHandler?.(fileId, page);
+export const notifyPdfPageMiss = (
+  fileId: string,
+  page: number,
+  hiRes = false,
+): void => {
+  pdfPageMissHandler?.(fileId, page, hiRes);
 };
 
 /**
@@ -61,6 +69,14 @@ export const clearPdfPlaceholderPending = (elementId: string): void => {
 export const isPdfPlaceholderPending = (elementId: string): boolean =>
   placeholderPending.has(elementId);
 
-/** builds the cache key for an element's (fileId, page) pair */
-export const pdfPageKey = (fileId: string, page: number): PdfPageKey =>
-  `${fileId}:${page}`;
+/**
+ * Builds the cache key for an element's (fileId, page) pair. The hi-res tier
+ * gets its own keyspace (`:hd` suffix) so SD and HD bitmaps coexist in both
+ * the runtime cache and the persistent IDB store; SD keys stay unchanged so
+ * caches written before the tier existed keep hitting.
+ */
+export const pdfPageKey = (
+  fileId: string,
+  page: number,
+  hiRes = false,
+): PdfPageKey => (hiRes ? `${fileId}:${page}:hd` : `${fileId}:${page}`);
