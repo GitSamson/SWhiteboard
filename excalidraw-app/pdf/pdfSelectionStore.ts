@@ -13,6 +13,14 @@ import type { OrderedExcalidrawElement } from "@excalidraw/element/types";
 
 export interface PdfToolbarSnapshot {
   element: ExcalidrawPdfElement | null;
+  /**
+   * `element.version` at publish time. DRAGS MUTATE ELEMENTS IN PLACE
+   * (`mutateElement` keeps object identity and only bumps the version), so
+   * comparing element identity alone can never detect movement — the toolbar
+   * would freeze at the drag-start position. The version bumps on every
+   * mutation, making it a reliable change signal.
+   */
+  elementVersion: number;
   scrollX: number;
   scrollY: number;
   zoom: number;
@@ -20,6 +28,7 @@ export interface PdfToolbarSnapshot {
 
 const EMPTY: PdfToolbarSnapshot = {
   element: null,
+  elementVersion: 0,
   scrollX: 0,
   scrollY: 0,
   zoom: 1,
@@ -52,6 +61,7 @@ export const publishPdfSelection = (
   const { scrollX, scrollY, zoom } = appState;
   if (
     snapshot.element === pdfElement &&
+    snapshot.elementVersion === (pdfElement?.version ?? 0) &&
     snapshot.scrollX === scrollX &&
     snapshot.scrollY === scrollY &&
     snapshot.zoom === zoom.value
@@ -59,10 +69,16 @@ export const publishPdfSelection = (
     return;
   }
   snapshot = pdfElement
-    ? { element: pdfElement, scrollX, scrollY, zoom: zoom.value }
+    ? {
+        element: pdfElement,
+        elementVersion: pdfElement.version,
+        scrollX,
+        scrollY,
+        zoom: zoom.value,
+      }
     : scrollX === 0 && scrollY === 0 && zoom.value === 1
     ? EMPTY
-    : { element: null, scrollX, scrollY, zoom: zoom.value };
+    : { element: null, elementVersion: 0, scrollX, scrollY, zoom: zoom.value };
   for (const listener of Array.from(listeners)) {
     listener();
   }

@@ -28,7 +28,12 @@ import {
 import { buildFfmpegArgs } from "../viteTranscodePlugin";
 import { clampPageRange } from "../pdf/pageRange";
 import { fetchPdfPage, openPdfData } from "../pdf/pdfPageCache";
-import { turnPdfPage } from "../pdf/pdfNavigation";
+import { togglePdfHiRes, turnPdfPage } from "../pdf/pdfNavigation";
+import {
+  getPdfSelectionSnapshot,
+  publishPdfSelection,
+  subscribePdfSelection,
+} from "../pdf/pdfSelectionStore";
 import {
   insertPageImages,
   PAGE_IMAGE_GAP,
@@ -141,6 +146,13 @@ describe("pdfPageKey", () => {
   it("joins fileId and page", () => {
     expect(pdfPageKey("abc", 3)).toBe("abc:3");
   });
+
+  it("keeps SD keys unchanged and suffixes the HD tier", () => {
+    // SD keys must stay tierless so IDB caches written before the hiRes
+    // feature keep hitting; HD gets its own keyspace
+    expect(pdfPageKey("abc", 3, false)).toBe("abc:3");
+    expect(pdfPageKey("abc", 3, true)).toBe("abc:3:hd");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -198,6 +210,60 @@ describe("turnPdfPage", () => {
     (api.updateScene as any).mockClear();
     turnPdfPage(api, updatedElement, 5);
     expect(api.updateScene).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// togglePdfHiRes
+// ---------------------------------------------------------------------------
+
+describe("togglePdfHiRes", () => {
+  const pdfElement = (hiRes?: boolean) =>
+    newPdfElement({
+      type: "pdf",
+      x: 10,
+      y: 20,
+      width: 480,
+      height: 640,
+      customData: {
+        sourceFile: {
+          fileId: "fid" as any,
+          kind: "pdf",
+          name: "d.pdf",
+          pageCount: 5,
+          currentPage: 2,
+          ...(hiRes === undefined ? {} : { hiRes }),
+        },
+      },
+    });
+
+  it("flips hiRes on via newElementWith without capturing an undo step", () => {
+    const { api, state } = fakeAPI();
+    const element = pdfElement();
+    state.elements = [element];
+
+    togglePdfHiRes(api, element);
+
+    expect(api.updateScene).toHaveBeenCalledTimes(1);
+    const update = (api.updateScene as any).mock.calls[0][0];
+    expect(update.captureUpdate).toBe(CaptureUpdateAction.NEVER);
+    const updated = update.elements.find((el: any) => el.id === element.id);
+    expect(updated).not.toBe(element);
+    expect(updated.customData.sourceFile.hiRes).toBe(true);
+    // original element untouched; page state preserved
+    expect(element.customData!.sourceFile.hiRes).toBeUndefined();
+    expect(updated.customData.sourceFile.currentPage).toBe(2);
+  });
+
+  it("flips hiRes back off", () => {
+    const { api, state } = fakeAPI();
+    const element = pdfElement(true);
+    state.elements = [element];
+
+    togglePdfHiRes(api, element);
+
+    const update = (api.updateScene as any).mock.calls[0][0];
+    expect(update.elements[0].customData.sourceFile.hiRes).toBe(false);
   });
 });
 
@@ -647,5 +713,81 @@ describe("buildFfmpegArgs", () => {
     expect(args).not.toContain("-vf");
     expect(args.join(" ")).not.toContain("scale");
     expect(args[args.length - 1]).toBe("out.mp4");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// publishPdfSelection (pdf toolbar external store)
+// ---------------------------------------------------------------------------
+
+describe("publishPdfSelection", () => {
+  const pdfEl = () =>
+    newPdfElement({
+      type: "pdf",
+      x: 100,
+      y: 200,
+      width: 480,
+      height: 640,
+      customData: {
+        sourceFile: {
+          fileId: "fid" as any,
+          kind: "pdf",
+          name: "d.pdf",
+          pageCount: 5,
+          currentPage: 1,
+        },
+      },
+    });
+
+  const appStateFor = (element: any) =>
+    ({
+      selectedElementIds: { [element.id]: true },
+      scrollX: 0,
+      scrollY: 0,
+      zoom: { value: 1 },
+    } as any);
+
+  it("notifies on select, on in-place drag mutation, and on deselect", () => {
+    const element = pdfEl();
+    const appState = appStateFor(element);
+    const listener = vi.fn();
+    const unsubscribe = subscribePdfSelection(listener);
+    try {
+      // select → publish
+      publishPdfSelection([element as any], appState);
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(getPdfSelectionSnapshot().element).toBe(element);
+
+      // same call again → deduped
+      publishPdfSelection([element as any], appState);
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      // DRAG: mutateElement semantics — SAME object identity, version bumped
+      // and x/y changed in place. The store must still republish, otherwise
+      // the toolbar freezes at the drag-start position.
+      (element as any).x = 500;
+      (element as any).y = 600;
+      (element as any).version += 1;
+      publishPdfSelection([element as any], appState);
+      expect(listener).toHaveBeenCalledTimes(2);
+      expect(getPdfSelectionSnapshot().element?.x).toBe(500);
+      expect(getPdfSelectionSnapshot().element?.y).toBe(600);
+
+      // no further change → deduped again
+      publishPdfSelection([element as any], appState);
+      expect(listener).toHaveBeenCalledTimes(2);
+
+      // deselect → publish null
+      publishPdfSelection([], {
+        selectedElementIds: {},
+        scrollX: 0,
+        scrollY: 0,
+        zoom: { value: 1 },
+      } as any);
+      expect(listener).toHaveBeenCalledTimes(3);
+      expect(getPdfSelectionSnapshot().element).toBeNull();
+    } finally {
+      unsubscribe();
+    }
   });
 });
