@@ -39,13 +39,16 @@ export interface PageImageBlob {
 /**
  * Store rendered page images as BinaryFiles and append them to the scene as a
  * vertical column of image elements below `insertAt`, each tagged with
- * `customData.sourcePdf` pointing back at the source document.
+ * `customData.sourcePdf` pointing back at the source document. `width`
+ * overrides the inserted image width (extract passes the source element's
+ * width so the extracted page matches the control's size).
  */
 export const insertPageImages = async (
   blobs: PageImageBlob[],
   insertAt: { x: number; y: number },
   excalidrawAPI: ExcalidrawImperativeAPI,
   sourceFileId: FileId,
+  width: number = PAGE_IMAGE_WIDTH,
 ): Promise<ExcalidrawImageElement[]> => {
   const elements: ExcalidrawImageElement[] = [];
   const fileData: BinaryFileData[] = [];
@@ -61,14 +64,14 @@ export const insertPageImages = async (
     );
     const dataURL = await blobToDataURL(blob);
     const dimensions = await getImageBlobDimensions(blob);
-    const height = (PAGE_IMAGE_WIDTH / dimensions.width) * dimensions.height;
+    const height = (width / dimensions.width) * dimensions.height;
 
     elements.push(
       newImageElement({
         type: "image",
         x: insertAt.x,
         y: cursorY,
-        width: PAGE_IMAGE_WIDTH,
+        width,
         height,
         fileId,
         status: "saved",

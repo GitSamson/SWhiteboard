@@ -819,6 +819,7 @@ class App extends React.Component<AppProps, AppState> {
       registerAction: (action: Action) => {
         this.actionManager.registerAction(action);
       },
+      executeAction: (action) => this.actionManager.executeAction(action),
       refresh: this.refresh,
       setToast: this.setToast,
       id: this.id,
@@ -4237,6 +4238,14 @@ class App extends React.Component<AppProps, AppState> {
     // does not change on-screen size, so it must not trigger this (the
     // original-decode burst is expensive).
     if (prevState.zoom.value !== this.state.zoom.value) {
+      this.scheduleImageQualitySync();
+    }
+
+    // wheel-zoom/pinch gestures park the image caches in "ignore zoom" mode
+    // for the gesture's duration; when the flag releases (gesture settled)
+    // run one quality sync so the deferred upgrades kick in afterwards,
+    // keeping the interaction itself free of decode bursts
+    if (prevState.shouldCacheIgnoreZoom && !this.state.shouldCacheIgnoreZoom) {
       this.scheduleImageQualitySync();
     }
 
@@ -12959,6 +12968,13 @@ class App extends React.Component<AppProps, AppState> {
   }, IMAGE_RENDER_TIMEOUT);
 
   private syncImageQuality = async () => {
+    // mid-gesture (wheel zoom / pinch): the caches ignore zoom changes and
+    // elements display stale-but-correct bitmaps; upgrading originals now
+    // would burst-decode during the interaction. The gesture-settled branch
+    // in componentDidUpdate re-triggers this once the flag releases.
+    if (this.state.shouldCacheIgnoreZoom) {
+      return;
+    }
     const zoom = this.state.zoom.value;
     const dpr = this.ownerWindow.devicePixelRatio || 1;
     const elementsMap = this.scene.getNonDeletedElementsMap();

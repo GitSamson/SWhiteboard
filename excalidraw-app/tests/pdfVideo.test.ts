@@ -39,6 +39,11 @@ import {
   PAGE_IMAGE_GAP,
   PAGE_IMAGE_WIDTH,
 } from "../pdf/pdfPages";
+import {
+  computeElementToolbarLayout,
+  ELEMENT_TOOLBAR_GAP,
+  ELEMENT_TOOLBAR_HEIGHT,
+} from "../media/ElementToolbar";
 
 // ---------------------------------------------------------------------------
 // module mocks
@@ -789,5 +794,41 @@ describe("publishPdfSelection", () => {
     } finally {
       unsubscribe();
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeElementToolbarLayout (floating element toolbar)
+// ---------------------------------------------------------------------------
+
+describe("computeElementToolbarLayout", () => {
+  const element = { x: 100, y: 200, width: 480, height: 640 };
+  const viewport = { scrollX: 0, scrollY: 0, zoom: 1 };
+
+  it("centers the pill above the element's top edge", () => {
+    const layout = computeElementToolbarLayout(element, viewport);
+    expect(layout.placement).toBe("above");
+    expect(layout.left).toBe(100 + 480 / 2);
+    expect(layout.top).toBe(200 - ELEMENT_TOOLBAR_GAP);
+  });
+
+  it("flips below the element when the pill would leave the viewport top", () => {
+    const nearTop = { ...element, y: ELEMENT_TOOLBAR_HEIGHT / 2 };
+    const layout = computeElementToolbarLayout(nearTop, viewport);
+    expect(layout.placement).toBe("below");
+    expect(layout.top).toBe(
+      (nearTop.y + nearTop.height) * 1 + ELEMENT_TOOLBAR_GAP,
+    );
+  });
+
+  it("accounts for scroll and zoom", () => {
+    const layout = computeElementToolbarLayout(element, {
+      scrollX: 10,
+      scrollY: 20,
+      zoom: 2,
+    });
+    expect(layout.left).toBe((100 + 10) * 2 + (480 * 2) / 2);
+    expect(layout.top).toBe((200 + 20) * 2 - ELEMENT_TOOLBAR_GAP);
+    expect(layout.placement).toBe("above");
   });
 });

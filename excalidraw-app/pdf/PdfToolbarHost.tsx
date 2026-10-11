@@ -1,17 +1,31 @@
 /**
- * Toolbar host for the native `pdf` element type, rendered app-side as a
- * portal below the selected element's box (same positioning as the video
- * capture-frame button). Page turns go through `turnPdfPage` (NEVER captured
- * in undo history); "extract"/"expand" rasterize pages on the dev server and
- * insert them as regular image elements.
+ * Toolbar host for the native `pdf` element type: the shared floating icon
+ * pill (`media/ElementToolbar`), hovering ABOVE the selected element's box.
+ * Page turns go through `turnPdfPage` (NEVER captured in undo history);
+ * "extract"/"expand" rasterize pages on the dev server and insert them as
+ * regular image elements. The expand page-range inputs live in a popover
+ * under the pill; the HD toggle switches the preview/extract quality tier.
  */
 
 import { useCallback, useState, useSyncExternalStore } from "react";
-import { createPortal } from "react-dom";
 
 import { useI18n } from "@excalidraw/excalidraw/i18n";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+
+import {
+  ElementToolbar,
+  ToolbarDivider,
+  ToolbarIconButton,
+  ToolbarPopover,
+} from "../media/ElementToolbar";
+import {
+  ToolbarChevronLeftIcon,
+  ToolbarChevronRightIcon,
+  ToolbarHdMark,
+  ToolbarImageDownIcon,
+  ToolbarLayersIcon,
+} from "../media/toolbarIcons";
 
 import { fetchPdfPage, openPdfData } from "./pdfPageCache";
 import { togglePdfHiRes, turnPdfPage } from "./pdfNavigation";
@@ -54,6 +68,27 @@ const mapWithConcurrency = async <T, R>(
   return results;
 };
 
+const rangeInputStyle: React.CSSProperties = {
+  width: 44,
+  fontSize: 12,
+  padding: "2px 4px",
+  border: "1px solid rgba(0, 0, 0, 0.15)",
+  borderRadius: 6,
+  background: "#fff",
+  color: "#242529",
+};
+
+const popoverButtonStyle: React.CSSProperties = {
+  background: "#242529",
+  border: "none",
+  borderRadius: 6,
+  color: "#fff",
+  cursor: "pointer",
+  fontSize: 12,
+  padding: "4px 10px",
+  whiteSpace: "nowrap",
+};
+
 export const PdfToolbarHost: React.FC<{
   excalidrawAPI: ExcalidrawImperativeAPI;
 }> = ({ excalidrawAPI }) => {
@@ -63,7 +98,7 @@ export const PdfToolbarHost: React.FC<{
     getPdfSelectionSnapshot,
   );
   const [busy, setBusy] = useState(false);
-  const [showExpand, setShowExpand] = useState(false);
+  const [expandOpen, setExpandOpen] = useState(false);
   const [rangeStart, setRangeStart] = useState(1);
   const [rangeEnd, setRangeEnd] = useState(1);
 
@@ -90,11 +125,14 @@ export const PdfToolbarHost: React.FC<{
       const width =
         sourceFile.hiRes === true ? EXTRACT_WIDTH_HD_PX : EXTRACT_WIDTH_PX;
       const blob = await fetchPdfPage(info.hash, page, width);
+      // extracted page matches the control's size (width = element width,
+      // height follows the page aspect ratio)
       await insertPageImages(
         [{ blob, pageNumber: page }],
         { x: element.x, y: element.y + element.height + INSERT_OFFSET },
         excalidrawAPI,
         sourceFile.fileId,
+        element.width,
       );
     } finally {
       setBusy(false);
@@ -140,6 +178,7 @@ export const PdfToolbarHost: React.FC<{
         excalidrawAPI,
         sourceFile.fileId,
       );
+      setExpandOpen(false);
     } finally {
       setBusy(false);
     }
@@ -157,117 +196,62 @@ export const PdfToolbarHost: React.FC<{
   const hiRes = sourceFile?.hiRes === true;
   const { scrollX, scrollY, zoom } = snapshot;
 
-  const buttonStyle: React.CSSProperties = {
-    background: "transparent",
-    border: "1px solid rgba(255, 255, 255, 0.4)",
-    borderRadius: 4,
-    color: "#fff",
-    cursor: "pointer",
-    fontSize: 12,
-    padding: "2px 8px",
-    whiteSpace: "nowrap",
-  };
-  const inputStyle: React.CSSProperties = {
-    width: 44,
-    fontSize: 12,
-    padding: "1px 4px",
-    border: "1px solid rgba(255, 255, 255, 0.4)",
-    borderRadius: 4,
-    background: "rgba(255, 255, 255, 0.1)",
-    color: "#fff",
-  };
-
-  return createPortal(
-    <div
-      style={{
-        position: "absolute",
-        left: (element.x + scrollX) * zoom + (element.width * zoom) / 2,
-        transform: "translateX(-50%)",
-        top: (element.y + scrollY + element.height) * zoom + 4,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 4,
-        zIndex: 5,
-      }}
+  return (
+    <ElementToolbar
+      element={element}
+      viewport={{ scrollX, scrollY, zoom }}
+      onPointerDownOutside={expandOpen ? () => setExpandOpen(false) : undefined}
     >
-      <div
+      <ToolbarIconButton
+        label={t("mediaImport.prevPage")}
+        disabled={page <= 1}
+        onClick={() => turnPdfPage(excalidrawAPI, element, page - 1)}
+      >
+        <ToolbarChevronLeftIcon />
+      </ToolbarIconButton>
+      <span
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "4px 8px",
-          background: "rgba(0, 0, 0, 0.8)",
-          borderRadius: 6,
-          color: "#fff",
+          minWidth: 44,
+          textAlign: "center",
           fontSize: 12,
+          fontVariantNumeric: "tabular-nums",
         }}
       >
-        <button
-          type="button"
-          style={buttonStyle}
-          disabled={page <= 1}
-          onClick={() => turnPdfPage(excalidrawAPI, element, page - 1)}
-        >
-          ◀
-        </button>
-        <span style={{ minWidth: 44, textAlign: "center" }}>
-          {t("mediaImport.pageOf", { current: page, total: pageCount })}
-        </span>
-        <button
-          type="button"
-          style={buttonStyle}
-          disabled={page >= pageCount}
-          onClick={() => turnPdfPage(excalidrawAPI, element, page + 1)}
-        >
-          ▶
-        </button>
-        <button
-          type="button"
-          style={buttonStyle}
-          disabled={busy}
-          onClick={() => void extractPage()}
-        >
-          {t("mediaImport.extractPage")}
-        </button>
-        <button
-          type="button"
-          style={{
-            ...buttonStyle,
-            background: showExpand ? "rgba(255, 255, 255, 0.2)" : "transparent",
-          }}
-          disabled={busy}
-          onClick={() => setShowExpand((prev) => !prev)}
-        >
-          {t("mediaImport.expandPages")}
-        </button>
-        <button
-          type="button"
-          title={t("mediaImport.hiResHint")}
-          style={{
-            ...buttonStyle,
-            background: hiRes ? "rgba(255, 255, 255, 0.2)" : "transparent",
-            fontWeight: hiRes ? 700 : 400,
-          }}
-          disabled={busy}
-          onClick={() => togglePdfHiRes(excalidrawAPI, element)}
-        >
-          {t("mediaImport.hiRes")}
-        </button>
-      </div>
-      {showExpand && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "4px 8px",
-            background: "rgba(0, 0, 0, 0.8)",
-            borderRadius: 6,
-            color: "#fff",
-            fontSize: 12,
-          }}
-        >
+        {t("mediaImport.pageOf", { current: page, total: pageCount })}
+      </span>
+      <ToolbarIconButton
+        label={t("mediaImport.nextPage")}
+        disabled={page >= pageCount}
+        onClick={() => turnPdfPage(excalidrawAPI, element, page + 1)}
+      >
+        <ToolbarChevronRightIcon />
+      </ToolbarIconButton>
+      <ToolbarDivider />
+      <ToolbarIconButton
+        label={t("mediaImport.extractPage")}
+        disabled={busy}
+        onClick={() => void extractPage()}
+      >
+        <ToolbarImageDownIcon />
+      </ToolbarIconButton>
+      <ToolbarIconButton
+        label={t("mediaImport.expandPages")}
+        active={expandOpen}
+        disabled={busy}
+        onClick={() => setExpandOpen((prev) => !prev)}
+      >
+        <ToolbarLayersIcon />
+      </ToolbarIconButton>
+      <ToolbarIconButton
+        label={t("mediaImport.hiRes")}
+        active={hiRes}
+        disabled={busy}
+        onClick={() => togglePdfHiRes(excalidrawAPI, element)}
+      >
+        <ToolbarHdMark active={hiRes} />
+      </ToolbarIconButton>
+      {expandOpen && (
+        <ToolbarPopover>
           <label>{t("mediaImport.pageFrom")}</label>
           <input
             type="number"
@@ -275,7 +259,7 @@ export const PdfToolbarHost: React.FC<{
             max={pageCount}
             value={rangeStart}
             onChange={(event) => setRangeStart(Number(event.target.value))}
-            style={inputStyle}
+            style={rangeInputStyle}
           />
           <label>{t("mediaImport.pageTo")}</label>
           <input
@@ -284,19 +268,18 @@ export const PdfToolbarHost: React.FC<{
             max={pageCount}
             value={rangeEnd}
             onChange={(event) => setRangeEnd(Number(event.target.value))}
-            style={inputStyle}
+            style={rangeInputStyle}
           />
           <button
             type="button"
-            style={buttonStyle}
+            style={popoverButtonStyle}
             disabled={busy}
             onClick={() => void expandPages()}
           >
             {t("mediaImport.expand")}
           </button>
-        </div>
+        </ToolbarPopover>
       )}
-    </div>,
-    document.body,
+    </ElementToolbar>
   );
 };

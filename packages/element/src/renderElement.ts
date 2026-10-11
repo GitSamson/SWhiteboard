@@ -824,6 +824,12 @@ export const renderElement = (
   context: CanvasRenderingContext2D,
   renderConfig: StaticCanvasRenderConfig,
   appState: StaticCanvasAppState | InteractiveCanvasAppState,
+  /**
+   * shared per-frame budget for zoom-triggered offscreen-canvas
+   * regenerations; when exhausted, elements keep their previous (stale-zoom)
+   * canvas this frame so mass zoom-bucket crossings don't block the frame
+   */
+  generationBudget?: { remaining: number },
 ) => {
   const reduceAlphaForSelection =
     appState.openDialog?.name === "elementLinkSelector" &&
@@ -909,6 +915,7 @@ export const renderElement = (
           allElementsMap,
           renderConfig,
           appState,
+          generationBudget,
         );
         if (!elementWithCanvas) {
           return;
@@ -1023,6 +1030,7 @@ export const renderElement = (
           allElementsMap,
           renderConfig,
           appState,
+          generationBudget,
         );
 
         if (!elementWithCanvas) {

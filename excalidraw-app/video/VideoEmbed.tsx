@@ -5,15 +5,18 @@
  *
  * Plays the video from an object URL derived from the scene BinaryFiles
  * entry. The embeddable box resizes itself to the video's aspect ratio once
- * metadata loads. The capture-frame button (only while paused) renders in a
- * portal BELOW the video box (the overlay clips overflow, and inside the box
- * it covered the native controls) and inserts the current frame — with a
- * burned-in timecode — as an image element to the right of the video.
+ * metadata loads. The native `<video controls>` are replaced by two
+ * selection-gated portals (the overlay clips overflow, and inside the box
+ * they covered the video):
+ * - ABOVE the box: the shared floating icon toolbar (`media/ElementToolbar`)
+ *   — node info (name / pixel size / file size), download source, replace
+ *   video, capture frame (enabled only while paused), fullscreen.
+ * - BELOW the box: custom playback controls (`VideoControlsBar`) —
+ *   play/pause, seek bar, volume/mute, capture frame.
  * Unsupported codecs trigger an automatic server transcode (no manual click).
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 
 import { newElementWith, newImageElement } from "@excalidraw/element";
 import { generateIdFromFile } from "@excalidraw/excalidraw/data/blob";
@@ -22,9 +25,25 @@ import Spinner from "@excalidraw/excalidraw/components/Spinner";
 
 import type { AppState } from "@excalidraw/excalidraw/types";
 import type { ExcalidrawEmbeddableElement } from "@excalidraw/element/types";
-import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import type {
+  BinaryFileData,
+  ExcalidrawImperativeAPI,
+} from "@excalidraw/excalidraw/types";
 
 import { blobToDataURL } from "../linkedAssets/convert";
+import {
+  ElementToolbar,
+  ToolbarIconButton,
+  ToolbarPopover,
+} from "../media/ElementToolbar";
+import { pickFile } from "../media/filePicker";
+import {
+  ToolbarCameraIcon,
+  ToolbarDownloadIcon,
+  ToolbarFullscreenIcon,
+  ToolbarInfoIcon,
+  ToolbarReplaceIcon,
+} from "../media/toolbarIcons";
 
 import { captureVideoFrame } from "./captureVideoFrame";
 import { formatTimecode } from "./formatTimecode";
@@ -34,6 +53,7 @@ import {
   replaceVideoWithTranscoded,
   transcodeVideoOnServer,
 } from "./transcode";
+import { VideoControlsBar } from "./VideoControlsBar";
 
 import type { TranscodeSourceFileMeta } from "./transcode";
 
@@ -51,6 +71,23 @@ const dataURLToBlob = (dataURL: string): Blob => {
   return new Blob([bytes], { type: mime });
 };
 
+/** approximate decoded byte size of a base64 data URL */
+const dataURLByteSize = (dataURL: string): number => {
+  const base64 = dataURL.slice(dataURL.indexOf(",") + 1);
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  return Math.floor((base64.length * 3) / 4) - padding;
+};
+
+const formatBytes = (bytes: number): string => {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  if (bytes >= 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${bytes} B`;
+};
+
 export const VideoEmbed: React.FC<{
   element: ExcalidrawEmbeddableElement;
   appState: AppState;
@@ -62,6 +99,15 @@ export const VideoEmbed: React.FC<{
     | undefined;
   const videoRef = useRef<HTMLVideoElement>(null);
   const [paused, setPaused] = useState(true);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [muted, setMuted] = useState(false);
+  const [videoDims, setVideoDims] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
   // NOTE: failure is DERIVED (below), not latched — these widgets mount while
   // the scene's BinaryFiles are still being restored from IndexedDB, and a
   // one-shot "no dataURL → failed" latch sticks even after the file arrives
@@ -142,6 +188,8 @@ export const VideoEmbed: React.FC<{
     if (!video?.videoWidth) {
       return;
     }
+    setVideoDims({ width: video.videoWidth, height: video.videoHeight });
+    setDuration(Number.isFinite(video.duration) ? video.duration : 0);
     const expectedHeight = Math.round(
       element.width * (video.videoHeight / video.videoWidth),
     );
@@ -227,6 +275,84 @@ export const VideoEmbed: React.FC<{
     }
   };
 
+  const togglePlay = () => {
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+    if (video.paused) {
+      void video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  };
+
+  const downloadSource = () => {
+    if (!dataURL || !sourceFile) {
+      return;
+    }
+    const anchor = document.createElement("a");
+    anchor.href = dataURL;
+    anchor.download = sourceFile.name || "video";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  };
+
+  /** swap the BinaryFiles bytes for a user-picked file, keeping the fileId */
+  const replaceVideo = async () => {
+    if (!sourceFile?.fileId) {
+      return;
+    }
+    const file = await pickFile(
+      ["video/*", ".mkv", ".hevc", ".h265"],
+      document,
+    );
+    if (!file) {
+      return;
+    }
+    excalidrawAPI.addFiles(
+      [
+        {
+          mimeType: (file.type || "video/mp4") as BinaryFileData["mimeType"],
+          id: sourceFile.fileId,
+          dataURL: await blobToDataURL(file),
+          created: Date.now(),
+          lastRetrieved: Date.now(),
+        },
+      ],
+      { replace: true },
+    );
+    // rename + clear the transcoded flag; a fresh file re-runs the
+    // decode/transcode detection from scratch
+    excalidrawAPI.updateScene({
+      elements: excalidrawAPI.getSceneElements().map((el) =>
+        el.id === element.id
+          ? newElementWith(el, {
+              customData: {
+                ...el.customData,
+                sourceFile: {
+                  fileId: sourceFile.fileId,
+                  kind: "video",
+                  name: file.name,
+                },
+              },
+            })
+          : el,
+      ),
+    });
+    autoAttemptsRef.current = 0;
+    setDecodeFailed(false);
+    setTranscodeFailed(false);
+    setVideoDims(null);
+    setCurrentTime(0);
+    setDuration(0);
+  };
+
+  const enterFullscreen = () => {
+    void videoRef.current?.requestFullscreen?.().catch(() => {});
+  };
+
   const videoBox = (
     <div
       style={{
@@ -299,10 +425,17 @@ export const VideoEmbed: React.FC<{
       ) : (
         <video
           ref={videoRef}
-          controls
           src={blobUrl ?? undefined}
+          onClick={togglePlay}
           onPlay={() => setPaused(false)}
           onPause={() => setPaused(true)}
+          onTimeUpdate={(event) =>
+            setCurrentTime(event.currentTarget.currentTime)
+          }
+          onVolumeChange={(event) => {
+            setVolume(event.currentTarget.volume);
+            setMuted(event.currentTarget.muted);
+          }}
           onError={() => setDecodeFailed(true)}
           onLoadedMetadata={onLoadedMetadata}
           style={{
@@ -310,50 +443,139 @@ export const VideoEmbed: React.FC<{
             height: "100%",
             background: "#000",
             objectFit: "contain",
+            cursor: "pointer",
           }}
         />
       )}
     </div>
   );
 
-  // capture button lives BELOW the video box (portal): inside the box it
-  // covered the native controls, and the embeddable overlay clips overflow
+  // both toolbars are selection-gated portals: inside the box they would
+  // cover the video, and the embeddable overlay clips overflow
   const zoom = appState.zoom.value;
   const captureEnabled =
     paused && !busy && !failed && !decodeFailed && !transcoding;
-  const captureButton = createPortal(
-    <button
-      type="button"
-      disabled={!captureEnabled}
-      onClick={() => void captureFrame()}
-      title={t("mediaImport.captureFrame")}
-      style={{
-        position: "absolute",
-        left:
-          (element.x + appState.scrollX) * zoom + (element.width * zoom) / 2,
-        transform: "translateX(-50%)",
-        top: (element.y + appState.scrollY + element.height) * zoom + 4,
-        background: "rgba(0, 0, 0, 0.75)",
-        border: "1px solid rgba(255, 255, 255, 0.4)",
-        borderRadius: 4,
-        color: "#fff",
-        cursor: captureEnabled ? "pointer" : "default",
-        fontSize: 12,
-        opacity: captureEnabled ? 1 : 0.5,
-        padding: "3px 10px",
-        zIndex: 5,
-        whiteSpace: "nowrap",
-      }}
+  const playbackReady = !failed && !decodeFailed && !transcoding;
+  const selected = Boolean(appState.selectedElementIds[element.id]);
+  const viewport = {
+    scrollX: appState.scrollX,
+    scrollY: appState.scrollY,
+    zoom,
+  };
+
+  const infoToolbar = selected ? (
+    <ElementToolbar
+      element={element}
+      viewport={viewport}
+      onPointerDownOutside={infoOpen ? () => setInfoOpen(false) : undefined}
     >
-      {t("mediaImport.captureFrame")}
-    </button>,
-    document.body,
-  );
+      <ToolbarIconButton
+        label={t("mediaImport.nodeInfo")}
+        active={infoOpen}
+        onClick={() => setInfoOpen((prev) => !prev)}
+      >
+        <ToolbarInfoIcon />
+      </ToolbarIconButton>
+      <ToolbarIconButton
+        label={t("mediaImport.downloadSource")}
+        disabled={!dataURL}
+        onClick={downloadSource}
+      >
+        <ToolbarDownloadIcon />
+      </ToolbarIconButton>
+      <ToolbarIconButton
+        label={t("mediaImport.replaceVideo")}
+        disabled={!sourceFile?.fileId || transcoding}
+        onClick={() => void replaceVideo()}
+      >
+        <ToolbarReplaceIcon />
+      </ToolbarIconButton>
+      <ToolbarIconButton
+        label={t("mediaImport.captureFrame")}
+        disabled={!captureEnabled}
+        onClick={() => void captureFrame()}
+      >
+        <ToolbarCameraIcon />
+      </ToolbarIconButton>
+      <ToolbarIconButton
+        label={t("mediaImport.fullscreen")}
+        disabled={!playbackReady}
+        onClick={enterFullscreen}
+      >
+        <ToolbarFullscreenIcon />
+      </ToolbarIconButton>
+      {infoOpen && (
+        <ToolbarPopover>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "auto 1fr",
+              gap: "4px 12px",
+              whiteSpace: "normal",
+              textAlign: "left",
+            }}
+          >
+            <span style={{ opacity: 0.55 }}>{t("mediaImport.fileName")}</span>
+            <span>{sourceFile?.name ?? "—"}</span>
+            <span style={{ opacity: 0.55 }}>{t("mediaImport.dimensions")}</span>
+            <span>
+              {videoDims ? `${videoDims.width} × ${videoDims.height}` : "—"}
+            </span>
+            <span style={{ opacity: 0.55 }}>{t("mediaImport.fileSize")}</span>
+            <span>{dataURL ? formatBytes(dataURLByteSize(dataURL)) : "—"}</span>
+          </div>
+        </ToolbarPopover>
+      )}
+    </ElementToolbar>
+  ) : null;
+
+  const controlsBar = selected ? (
+    <VideoControlsBar
+      element={element}
+      viewport={viewport}
+      paused={paused}
+      currentTime={currentTime}
+      duration={duration}
+      volume={volume}
+      muted={muted}
+      captureEnabled={captureEnabled}
+      labels={{
+        play: t("mediaImport.play"),
+        pause: t("mediaImport.pause"),
+        mute: t("mediaImport.mute"),
+        unmute: t("mediaImport.unmute"),
+        capture: t("mediaImport.captureFrame"),
+      }}
+      onTogglePlay={togglePlay}
+      onSeek={(seconds) => {
+        const video = videoRef.current;
+        if (video) {
+          video.currentTime = seconds;
+          setCurrentTime(seconds);
+        }
+      }}
+      onVolume={(value) => {
+        const video = videoRef.current;
+        if (video) {
+          video.volume = value;
+          video.muted = value === 0;
+        }
+      }}
+      onToggleMute={() => {
+        const video = videoRef.current;
+        if (video) {
+          video.muted = !video.muted;
+        }
+      }}
+      onCapture={() => void captureFrame()}
+    />
+  ) : null;
 
   return (
     <>
       {videoBox}
-      {captureButton}
+      {infoToolbar}
+      {controlsBar}
     </>
   );
 };

@@ -122,6 +122,7 @@ import {
 } from "./pdf/pdfPageCache";
 import { publishPdfSelection } from "./pdf/pdfSelectionStore";
 import { MediaToolbarItems } from "./media/MediaToolbarItems";
+import { ImageToolbarHost } from "./media/ImageToolbarHost";
 import { pickFile } from "./media/filePicker";
 import { VideoEmbed } from "./video/VideoEmbed";
 import { importVideoFile, isSupportedVideoFile } from "./video/videoImport";
@@ -1336,6 +1337,7 @@ const ExcalidrawWrapper = () => {
         <AppFooter onChange={() => excalidrawAPI?.refresh()} />
         {excalidrawAPI && <AIComponents excalidrawAPI={excalidrawAPI} />}
         {excalidrawAPI && <PdfToolbarHost excalidrawAPI={excalidrawAPI} />}
+        {excalidrawAPI && <ImageToolbarHost excalidrawAPI={excalidrawAPI} />}
 
         <TTDDialogTrigger />
         {isCollaborating && isOffline && (

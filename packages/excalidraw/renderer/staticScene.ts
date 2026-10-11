@@ -269,6 +269,39 @@ const renderLinkIcon = (
     context.restore();
   }
 };
+/**
+ * Caps offscreen-canvas rasterizations per on-screen frame. When many
+ * elements cross a zoom-cache bucket at once (e.g. the repaint right after a
+ * wheel-zoom gesture ends), only this many regenerate per frame; the rest
+ * keep their previous (slightly stale-zoom) canvas, and continuation frames
+ * below progressively catch up — interaction stays smooth, quality settles
+ * in the background. Export bypasses the budget (stays exact, single-pass).
+ */
+const MAX_CANVAS_GENERATIONS_PER_FRAME = 8;
+
+/** continuation-frame state for budget-deferred regenerations */
+let lastOnScreenConfig: StaticSceneRenderConfig | null = null;
+let continuationRaf: number | null = null;
+/** safety stop for pathological loops (many permanently-null canvases) */
+let exhaustedStreak = 0;
+const MAX_EXHAUSTED_STREAK = 30;
+
+const scheduleContinuationFrame = (canvas: HTMLCanvasElement) => {
+  if (continuationRaf !== null || exhaustedStreak >= MAX_EXHAUSTED_STREAK) {
+    return;
+  }
+  const win = canvas.ownerDocument?.defaultView;
+  if (!win) {
+    return;
+  }
+  continuationRaf = win.requestAnimationFrame(() => {
+    continuationRaf = null;
+    if (lastOnScreenConfig) {
+      _renderStaticScene(lastOnScreenConfig);
+    }
+  });
+};
+
 const _renderStaticScene = ({
   canvas,
   rc,
@@ -284,6 +317,29 @@ const _renderStaticScene = ({
   }
 
   const { renderGrid = true, isExporting } = renderConfig;
+
+  // On-screen rendering opts into zoom-cache bucketing + a per-frame
+  // regeneration budget (see constants above). renderConfig is shared with
+  // other paths, so opt in via a shallow copy — export stays exact.
+  const generationBudget = isExporting
+    ? undefined
+    : { remaining: MAX_CANVAS_GENERATIONS_PER_FRAME };
+  const effectiveRenderConfig = isExporting
+    ? renderConfig
+    : { ...renderConfig, allowZoomCacheBucketing: true };
+
+  if (!isExporting) {
+    lastOnScreenConfig = {
+      canvas,
+      rc,
+      elementsMap,
+      allElementsMap,
+      visibleElements,
+      scale,
+      appState,
+      renderConfig,
+    };
+  }
 
   const [normalizedWidth, normalizedHeight] = getNormalizedCanvasDimensions(
     canvas,
@@ -312,7 +368,7 @@ const _renderStaticScene = ({
       appState.scrollX,
       appState.scrollY,
       appState.zoom,
-      renderConfig.theme,
+      effectiveRenderConfig.theme,
       normalizedWidth / appState.zoom.value,
       normalizedHeight / appState.zoom.value,
     );
@@ -374,7 +430,7 @@ const _renderStaticScene = ({
               inFrameGroupsMap,
             )
           ) {
-            frameClip(frame, context, renderConfig, appState);
+            frameClip(frame, context, effectiveRenderConfig, appState);
           }
           renderElement(
             element,
@@ -382,8 +438,9 @@ const _renderStaticScene = ({
             allElementsMap,
             rc,
             context,
-            renderConfig,
+            effectiveRenderConfig,
             appState,
+            generationBudget,
           );
         } else {
           renderElement(
@@ -392,8 +449,9 @@ const _renderStaticScene = ({
             allElementsMap,
             rc,
             context,
-            renderConfig,
+            effectiveRenderConfig,
             appState,
+            generationBudget,
           );
         }
 
@@ -405,14 +463,15 @@ const _renderStaticScene = ({
             allElementsMap,
             rc,
             context,
-            renderConfig,
+            effectiveRenderConfig,
             appState,
+            generationBudget,
           );
         }
 
         context.restore();
 
-        if (!isExporting && renderConfig.renderLinks !== false) {
+        if (!isExporting && effectiveRenderConfig.renderLinks !== false) {
           renderLinkIcon(element, context, appState, elementsMap);
         }
       } catch (error: any) {
@@ -439,15 +498,16 @@ const _renderStaticScene = ({
             allElementsMap,
             rc,
             context,
-            renderConfig,
+            effectiveRenderConfig,
             appState,
+            generationBudget,
           );
 
           if (
             isIframeLikeElement(element) &&
             (isExporting ||
               (isEmbeddableElement(element) &&
-                renderConfig.embedsValidationStatus.get(element.id) !==
+                effectiveRenderConfig.embedsValidationStatus.get(element.id) !==
                   true)) &&
             element.width &&
             element.height
@@ -459,11 +519,12 @@ const _renderStaticScene = ({
               allElementsMap,
               rc,
               context,
-              renderConfig,
+              effectiveRenderConfig,
               appState,
+              generationBudget,
             );
           }
-          if (!isExporting && renderConfig.renderLinks !== false) {
+          if (!isExporting && effectiveRenderConfig.renderLinks !== false) {
             renderLinkIcon(element, context, appState, elementsMap);
           }
         };
@@ -491,7 +552,7 @@ const _renderStaticScene = ({
               inFrameGroupsMap,
             )
           ) {
-            frameClip(frame, context, renderConfig, appState);
+            frameClip(frame, context, effectiveRenderConfig, appState);
           }
           render();
           context.restore();
@@ -504,7 +565,7 @@ const _renderStaticScene = ({
     });
 
   // render pending nodes for flowcharts
-  renderConfig.pendingFlowchartNodes?.forEach((element) => {
+  effectiveRenderConfig.pendingFlowchartNodes?.forEach((element) => {
     try {
       renderElement(
         element,
@@ -512,13 +573,26 @@ const _renderStaticScene = ({
         allElementsMap,
         rc,
         context,
-        renderConfig,
+        effectiveRenderConfig,
         appState,
+        generationBudget,
       );
     } catch (error) {
       console.error(error);
     }
   });
+
+  // budget exhausted this pass → some zoom-triggered regenerations were
+  // deferred and those elements are showing stale canvases; keep the frame
+  // chain alive so they catch up progressively in the background
+  if (generationBudget) {
+    if (generationBudget.remaining === 0) {
+      exhaustedStreak++;
+      scheduleContinuationFrame(canvas);
+    } else {
+      exhaustedStreak = 0;
+    }
+  }
 };
 
 /** throttled to animation framerate */

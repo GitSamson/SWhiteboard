@@ -1306,6 +1306,8 @@ export interface ExcalidrawImperativeAPI {
   setViewport: InstanceType<typeof App>["viewport"]["setViewport"];
   getViewportOffsets: InstanceType<typeof App>["viewport"]["getOffsets"];
   registerAction: (action: Action) => void;
+  /** run a registered/library action (same path as context-menu items) */
+  executeAction: InstanceType<typeof App>["actionManager"]["executeAction"];
   refresh: InstanceType<typeof App>["refresh"];
   setToast: InstanceType<typeof App>["setToast"];
   addFiles: (data: BinaryFileData[], opts?: { replace?: boolean }) => void;
