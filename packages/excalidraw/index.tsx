@@ -72,6 +72,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     onChange,
     onThemeChange,
     onIncrement,
+    onDropFiles,
     initialData,
     initialState,
     onExcalidrawAPI,
@@ -214,6 +215,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           onChange={onChange}
           onThemeChange={onThemeChange}
           onIncrement={onIncrement}
+          onDropFiles={onDropFiles}
           initialData={initialData}
           initialState={initialState}
           onExcalidrawAPI={handleExcalidrawAPI}

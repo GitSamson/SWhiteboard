@@ -32,10 +32,11 @@ import type {
 } from "@excalidraw/excalidraw/types";
 
 import { blobToDataURL } from "./convert";
-import { isImportableAssetFile } from "./assetTypes";
+import { isImportableAssetFile, isPlaceholderAssetFile } from "./assetTypes";
 import { refreshFolderConnectionStatuses } from "./connectionStatus";
 import { importNewFilesIntoFrame } from "./importer";
 import { invalidateLinkedOriginal } from "./originals";
+import { generateFilePlaceholder } from "./placeholder";
 import {
   ensureFolderPermission,
   getFolderEntry,
@@ -146,13 +147,31 @@ const verifyFrame = async (
     }
   }
 
-  // regenerate thumbnails for modified files
+  // regenerate thumbnails for modified files. Placeholder files (unknown
+  // formats) can't be decoded — regenerate their icon instead of attempting
+  // a real thumbnail.
+  const placeholderPaths = new Set(
+    linkedElements
+      .map((el) => getLinkedMeta(el))
+      .filter((meta): meta is LinkedFileMeta => !!meta?.placeholder)
+      .map((meta) => meta.relPath),
+  );
   const newThumbnails: Record<
     string,
     { dataURL: DataURL; size: number; width: number; height: number }
   > = {};
   for (const relPath of modifiedPaths) {
     try {
+      if (placeholderPaths.has(relPath)) {
+        const icon = generateFilePlaceholder(relPath);
+        newThumbnails[relPath] = {
+          dataURL: icon.dataURL,
+          size: diskByName.get(relPath)!,
+          width: icon.width,
+          height: icon.height,
+        };
+        continue;
+      }
       const fileHandle = await entry.handle.getFileHandle(relPath);
       const file = await fileHandle.getFile();
       const thumbnail = await generateThumbnail(await blobToDataURL(file));
@@ -295,9 +314,12 @@ const verifyFrame = async (
   }
 
   // new files on disk unknown to the manifest → import into the frame
+  // (importable images as thumbnails, everything else as file-icon
+  // placeholders)
   const newNames = diskFiles.filter(
     (f) =>
-      isImportableAssetFile({ name: f.name }) &&
+      (isImportableAssetFile({ name: f.name }) ||
+        isPlaceholderAssetFile({ name: f.name })) &&
       !manifestKnows(manifest, renames, f.name) &&
       !consumedDiskNames.has(f.name),
   );

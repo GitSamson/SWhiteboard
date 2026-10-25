@@ -88,10 +88,11 @@ export const getUnavailableLinkedOriginalCount = async (
       element.fileId &&
       element.customData?.linkedFile
     ) {
-      folderIdByFileId.set(
-        element.fileId,
-        (element.customData.linkedFile as LinkedFileMeta).folderId,
-      );
+      const meta = element.customData.linkedFile as LinkedFileMeta;
+      // placeholders never read originals, so they can't be "unavailable"
+      if (!meta.placeholder) {
+        folderIdByFileId.set(element.fileId, meta.folderId);
+      }
     }
   }
   const readableByFolderId = new Map<string, boolean>();

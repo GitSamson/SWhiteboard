@@ -69,6 +69,18 @@ vi.mock("../linkedAssets/convert", () => ({
   blobToDataURL: async () => "data:image/png;base64,AAAA" as const,
 }));
 
+// placeholder icons need a canvas 2d context — jsdom has none
+vi.mock("../linkedAssets/placeholder", () => ({
+  FILE_PLACEHOLDER_WIDTH: 240,
+  FILE_PLACEHOLDER_HEIGHT: 300,
+  getFileExtensionLabel: () => "FILE",
+  generateFilePlaceholder: () => ({
+    dataURL: "data:image/webp;base64,BBBB",
+    width: 240,
+    height: 300,
+  }),
+}));
+
 // the feature flag env var is off in tests — force availability on
 vi.mock("../linkedAssets/state", async (importOriginal) => {
   const original = await importOriginal<
@@ -357,6 +369,96 @@ describe("verifier", { timeout: 20000 }, () => {
     expect(importNewFilesIntoFrame).toHaveBeenCalledWith(api, "frame-1", [
       { name: "new.png", size: 3 },
     ]);
+  });
+
+  it("imports unknown-format files as placeholders", async () => {
+    const { verifyLinkedAssets } = await import("../linkedAssets/verifier");
+
+    const files: Record<string, FakeFile> = {
+      "notes.txt": new FakeFile("notes.txt", "hello", "text/plain"),
+    };
+    folderEntries.set("folder-1", {
+      handle: makeFakeDir(files),
+      rootName: "root",
+      lastUsedAt: 1,
+    });
+
+    const frame = makeSyncFrame({});
+    const api = makeExcalidrawAPI([frame]);
+
+    await verifyLinkedAssets(api);
+
+    expect(importNewFilesIntoFrame).toHaveBeenCalledWith(api, "frame-1", [
+      { name: "notes.txt", size: 5 },
+    ]);
+  });
+
+  it("skips dotfiles when scanning for new files", async () => {
+    const { verifyLinkedAssets } = await import("../linkedAssets/verifier");
+
+    const files: Record<string, FakeFile> = {
+      ".DS_Store": new FakeFile(
+        ".DS_Store",
+        "junk",
+        "application/octet-stream",
+      ),
+    };
+    folderEntries.set("folder-1", {
+      handle: makeFakeDir(files),
+      rootName: "root",
+      lastUsedAt: 1,
+    });
+
+    const frame = makeSyncFrame({});
+    const api = makeExcalidrawAPI([frame]);
+
+    await verifyLinkedAssets(api);
+
+    expect(importNewFilesIntoFrame).not.toHaveBeenCalled();
+  });
+
+  it("regenerates the icon when a placeholder file changes size", async () => {
+    const { verifyLinkedAssets } = await import("../linkedAssets/verifier");
+
+    const files: Record<string, FakeFile> = {
+      "notes.txt": new FakeFile("notes.txt", "hello world", "text/plain"),
+    };
+    folderEntries.set("folder-1", {
+      handle: makeFakeDir(files),
+      rootName: "root",
+      lastUsedAt: 1,
+    });
+
+    const frame = makeSyncFrame({
+      "notes.txt": { size: 5, elementIds: ["img-1"] },
+    });
+    const placeholder = makeImageElement("img-1", {
+      relPath: "notes.txt",
+      displayName: "notes.txt",
+      fileSize: 5,
+      mimeType: "text/plain",
+      placeholder: true,
+      width: 240,
+      height: 300,
+    });
+    const api = makeExcalidrawAPI([frame, placeholder]);
+
+    await verifyLinkedAssets(api);
+
+    const updated = api
+      .getSceneElementsIncludingDeleted()
+      .find((el) => el.id === "img-1")!;
+    expect((updated.customData!.linkedFile as LinkedFileMeta).fileSize).toBe(
+      11,
+    );
+    const updatedFrame = api
+      .getSceneElementsIncludingDeleted()
+      .find((el) => el.id === "frame-1")!;
+    expect(
+      (updatedFrame.customData!.syncFolder as SyncFolderMeta).manifest[
+        "notes.txt"
+      ].size,
+    ).toBe(11);
   });
 });
 

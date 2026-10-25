@@ -186,6 +186,7 @@
     "unCroppedDimension": "未裁剪的尺寸",
     "copyElementLink": "复制此对象的链接",
     "downloadOriginalImage": "下载原图",
+    "copyOriginalImage": "复制原图数据",
     "createSyncFrame": "创建同步画框",
     "convertToLinked": "链接到文件夹",
     "convertToEmbedded": "嵌入到画布文件",
@@ -587,7 +588,10 @@
     "pasteAsSingleElement": "使用 {{shortcut}} 粘贴为单个元素，\n或粘贴到现有的文本编辑器里",
     "unableToEmbed": "目前不允许嵌入此网址。请在 GitHub 上提 issue 请求将此网址加入白名单",
     "unrecognizedLinkFormat": "您嵌入的链接不符合格式要求。请尝试粘贴源网站提供的“嵌入 (embed)”字符串",
-    "elementLinkCopied": "链接已复制到剪贴板"
+    "elementLinkCopied": "链接已复制到剪贴板",
+    "copyOriginalImageSuccess": "已复制原图数据到剪贴板",
+    "copyOriginalImageError": "复制原图失败",
+    "copyOriginalImageReconnect": "无法读取原图文件，请重新连接链接文件夹后重试"
   },
   "colors": {
     "transparent": "透明",

@@ -152,3 +152,19 @@ export const ToolbarVolumeMutedIcon = () => (
     <line x1="16" x2="22" y1="9" y2="15" />
   </svg>
 );
+
+/** crop the selected image (lucide "crop") */
+export const ToolbarCropIcon = () => (
+  <svg {...iconProps}>
+    <path d="M6 2v14a2 2 0 0 0 2 2h14" />
+    <path d="M18 22V8a2 2 0 0 0-2-2H2" />
+  </svg>
+);
+
+/** copy to clipboard (lucide "copy") */
+export const ToolbarCopyIcon = () => (
+  <svg {...iconProps}>
+    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+  </svg>
+);

@@ -23,7 +23,11 @@ import type {
 
 import { blobToDataURL } from "./convert";
 import { readFileByRelPath } from "./fsAccess";
-import { getFolderEntry, queryFolderPermission } from "./folderRegistry";
+import {
+  ensureFolderPermission,
+  getFolderEntry,
+  queryFolderPermission,
+} from "./folderRegistry";
 
 import type { LinkedFileMeta } from "./types";
 
@@ -61,7 +65,9 @@ export const findLinkedMetaByFileId = (
 const loadOriginalDataURL = async (
   meta: LinkedFileMeta,
 ): Promise<DataURL | null> => {
-  if (meta.status === "missing") {
+  if (meta.status === "missing" || meta.placeholder) {
+    // placeholders link non-image files: the generated icon IS the only
+    // renderable content, the original bytes must never be decoded
     return null;
   }
   const entry = await getFolderEntry(meta.folderId);
@@ -104,6 +110,46 @@ export const createLinkedImageResolver =
   };
 
 /**
+ * Interactive variant of the resolver for user-gesture flows (e.g. "copy
+ * original image data"): when the folder's permission lapsed it PROMPTS for
+ * re-grant instead of silently skipping. Returns null when the folder handle
+ * is gone or the user denies — the caller must surface a reconnect hint
+ * rather than downgrading to the thumbnail.
+ */
+export const createLinkedImageInteractiveResolver =
+  (excalidrawAPI: ExcalidrawImperativeAPI) =>
+  async (
+    fileId: FileId,
+    _fileData: BinaryFileData,
+  ): Promise<DataURL | null> => {
+    const meta = findLinkedMetaByFileId(excalidrawAPI, fileId);
+    if (!meta || meta.status === "missing" || meta.placeholder) {
+      return null;
+    }
+    const cached = originalCache.get(fileId);
+    if (cached) {
+      return cached;
+    }
+    const entry = await getFolderEntry(meta.folderId);
+    if (!entry) {
+      return null;
+    }
+    // user gesture: prompting is acceptable here
+    if (!(await ensureFolderPermission(entry.handle))) {
+      return null;
+    }
+    try {
+      const file = await readFileByRelPath(entry.handle, meta.relPath);
+      const dataURL = await blobToDataURL(file);
+      originalCache.set(fileId, dataURL);
+      return dataURL;
+    } catch (error) {
+      console.warn(`failed to load original for ${meta.relPath}`, error);
+      return null;
+    }
+  };
+
+/**
  * Returns a copy of `files` with linked thumbnails replaced by their
  * originals (dataURL + mimeType). Used before PNG/SVG export. Files whose
  * original can't be loaded keep their thumbnail.
@@ -119,10 +165,11 @@ export const resolveOriginalsForExport = async (
       element.fileId &&
       element.customData?.linkedFile
     ) {
-      metaByFileId.set(
-        element.fileId,
-        element.customData.linkedFile as LinkedFileMeta,
-      );
+      const meta = element.customData.linkedFile as LinkedFileMeta;
+      // placeholders keep their icon on export — the original isn't an image
+      if (!meta.placeholder) {
+        metaByFileId.set(element.fileId, meta);
+      }
     }
   }
   if (!metaByFileId.size) {

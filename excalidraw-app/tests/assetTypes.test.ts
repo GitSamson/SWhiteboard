@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   getAssetTypeHandler,
   isImportableAssetFile,
+  isPlaceholderAssetFile,
   listAssetTypeHandlers,
 } from "../linkedAssets/assetTypes";
 
@@ -53,5 +54,27 @@ describe("assetTypes registry", () => {
     expect(
       isImportableAssetFile({ name: "ok.png", mimeType: "image/png" }),
     ).toBe(true);
+  });
+
+  it("flags unknown formats as placeholder candidates, excluding dotfiles", () => {
+    // unknown formats → placeholder
+    expect(isPlaceholderAssetFile({ name: "notes.txt" })).toBe(true);
+    expect(isPlaceholderAssetFile({ name: "archive.zip" })).toBe(true);
+    expect(isPlaceholderAssetFile({ name: "Makefile" })).toBe(true);
+    // declared-but-unimplemented types are placeholders too
+    expect(isPlaceholderAssetFile({ name: "clip.mp4" })).toBe(true);
+    expect(isPlaceholderAssetFile({ name: "doc.pdf" })).toBe(true);
+    // mime mismatch on an image extension is NOT a real image → placeholder
+    expect(
+      isPlaceholderAssetFile({ name: "evil.png", mimeType: "application/pdf" }),
+    ).toBe(true);
+    // importable images and dotfiles are not placeholders
+    expect(isPlaceholderAssetFile({ name: "ok.png" })).toBe(false);
+    expect(
+      isPlaceholderAssetFile({ name: "ok.png", mimeType: "image/png" }),
+    ).toBe(false);
+    expect(isPlaceholderAssetFile({ name: ".DS_Store" })).toBe(false);
+    expect(isPlaceholderAssetFile({ name: ".png" })).toBe(false);
+    expect(isPlaceholderAssetFile({ name: "" })).toBe(false);
   });
 });

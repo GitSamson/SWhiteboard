@@ -27,7 +27,19 @@ export interface LinkedFileMeta {
    * this field existed fall back to loading the original from disk.
    */
   width?: number;
+  /**
+   * full-resolution height; see `width`.
+   */
   height?: number;
+  /**
+   * true when the linked file is NOT an importable image: the element's
+   * BinaryFiles entry holds a generated file-icon image (never the original
+   * bytes) and `width`/`height` record the icon's dimensions. Placeholders
+   * never read the original for rendering/export — the resolver returns null
+   * and the icon is always what's drawn — but rename/duplicate/delete still
+   * operate on the real file on disk.
+   */
+  placeholder?: true;
 }
 
 export interface SyncFolderManifestEntry {

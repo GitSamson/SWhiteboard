@@ -108,3 +108,20 @@ export const isImportableAssetFile = (file: {
   }
   return handler.id === "image";
 };
+
+/**
+ * whether a NON-importable file should still appear in a sync frame as a
+ * file-icon placeholder element (see placeholder.ts). Placeholders keep the
+ * link metadata so rename/duplicate/delete still operate on the real file
+ * on disk; they just never decode the original. System dotfiles (".DS_Store"
+ * & friends) are excluded.
+ */
+export const isPlaceholderAssetFile = (file: {
+  name: string;
+  mimeType?: string;
+}): boolean => {
+  if (!file.name || file.name.startsWith(".")) {
+    return false;
+  }
+  return !isImportableAssetFile(file);
+};

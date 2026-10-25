@@ -18,6 +18,10 @@ import { useI18n } from "@excalidraw/excalidraw/i18n";
 
 import { actionDownloadOriginalImage } from "@excalidraw/excalidraw/actions/actionDownloadOriginalImage";
 
+import { actionCopyOriginalImage } from "@excalidraw/excalidraw/actions/actionCopyOriginalImage";
+
+import { actionToggleCropEditor } from "@excalidraw/excalidraw/actions/actionCropEditor";
+
 import { actionExportHighestQualityPng } from "@excalidraw/excalidraw/actions/actionExportHighestQualityPng";
 
 import { actionExportPdf } from "@excalidraw/excalidraw/actions/actionExportPdf";
@@ -32,6 +36,8 @@ import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import { ElementToolbar, ToolbarIconButton } from "./ElementToolbar";
 import {
+  ToolbarCopyIcon,
+  ToolbarCropIcon,
   ToolbarDownloadIcon,
   ToolbarFileTextIcon,
   ToolbarImageDownIcon,
@@ -44,6 +50,8 @@ interface ImageToolbarSnapshot {
   elementVersion: number;
   /** whether the element's BinaryFiles entry is available for download */
   hasFile: boolean;
+  /** file-icon placeholders link non-image files — no original image to copy */
+  isPlaceholder: boolean;
   scrollX: number;
   scrollY: number;
   zoom: number;
@@ -53,6 +61,7 @@ const EMPTY: ImageToolbarSnapshot = {
   element: null,
   elementVersion: 0,
   hasFile: false,
+  isPlaceholder: false,
   scrollX: 0,
   scrollY: 0,
   zoom: 1,
@@ -86,11 +95,19 @@ const publish = (
   const hasFile = Boolean(
     imageElement?.fileId && files[imageElement.fileId]?.dataURL,
   );
+  const isPlaceholder = Boolean(
+    (
+      imageElement?.customData?.linkedFile as
+        | { placeholder?: boolean }
+        | undefined
+    )?.placeholder,
+  );
   const { scrollX, scrollY, zoom } = appState;
   if (
     snapshot.element === imageElement &&
     snapshot.elementVersion === (imageElement?.version ?? 0) &&
     snapshot.hasFile === hasFile &&
+    snapshot.isPlaceholder === isPlaceholder &&
     snapshot.scrollX === scrollX &&
     snapshot.scrollY === scrollY &&
     snapshot.zoom === zoom.value
@@ -102,6 +119,7 @@ const publish = (
         element: imageElement,
         elementVersion: imageElement.version,
         hasFile,
+        isPlaceholder,
         scrollX,
         scrollY,
         zoom: zoom.value,
@@ -150,6 +168,19 @@ export const ImageToolbarHost: React.FC<{
 
   return (
     <ElementToolbar element={element} viewport={{ scrollX, scrollY, zoom }}>
+      <ToolbarIconButton
+        label={t("helpDialog.cropStart")}
+        onClick={() => excalidrawAPI.executeAction(actionToggleCropEditor)}
+      >
+        <ToolbarCropIcon />
+      </ToolbarIconButton>
+      <ToolbarIconButton
+        label={t("labels.copyOriginalImage")}
+        disabled={!snap.hasFile || snap.isPlaceholder}
+        onClick={() => excalidrawAPI.executeAction(actionCopyOriginalImage)}
+      >
+        <ToolbarCopyIcon />
+      </ToolbarIconButton>
       <ToolbarIconButton
         label={t("labels.downloadOriginalImage")}
         disabled={!snap.hasFile}

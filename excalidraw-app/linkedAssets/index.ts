@@ -33,6 +33,7 @@ import { convertElementsToEmbedded, convertElementsToLinked } from "./convert";
 import { resetSyncFrameLayout, showHiddenImages } from "./frameActions";
 import {
   clearLinkedOriginalCache,
+  createLinkedImageInteractiveResolver,
   createLinkedImageResolver,
   resolveOriginalsForExport,
 } from "./originals";
@@ -193,6 +194,9 @@ export const initLinkedAssets = (
     },
     // hi-res originals for canvas rendering / export
     resolveOriginal: createLinkedImageResolver(excalidrawAPI),
+    // user-gesture flows (copy original) may prompt for folder permission
+    resolveOriginalInteractive:
+      createLinkedImageInteractiveResolver(excalidrawAPI),
     resolveOriginalsForExport: (files) =>
       resolveOriginalsForExport(excalidrawAPI, files),
     getUnavailableLinkedOriginalCount: (fileIds) =>

@@ -93,6 +93,7 @@ export { actionToggleSearchMenu } from "./actionToggleSearchMenu";
 
 export { actionToggleCropEditor } from "./actionCropEditor";
 export { actionDownloadOriginalImage } from "./actionDownloadOriginalImage";
+export { actionCopyOriginalImage } from "./actionCopyOriginalImage";
 export { actionDownloadSourceFile } from "./actionDownloadSourceFile";
 export { actionExportHighestQualityPng } from "./actionExportHighestQualityPng";
 export { actionExportPdf } from "./actionExportPdf";

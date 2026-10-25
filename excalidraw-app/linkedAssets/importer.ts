@@ -1,7 +1,10 @@
 /**
- * Auto-import for the "linked file assets" feature: image files that appear
- * in a sync frame's bound folder (and are unknown to its manifest) are
- * imported as linked image elements, laid out in a grid inside the frame.
+ * Auto-import for the "linked file assets" feature: files that appear in a
+ * sync frame's bound folder (and are unknown to its manifest) are imported
+ * as linked image elements, laid out in a grid inside the frame. Importable
+ * images get a real thumbnail; any other file gets a generated file-icon
+ * placeholder (see placeholder.ts) so it still shows up on the board and
+ * keeps rename/duplicate/delete working on the real file.
  */
 
 import { randomId } from "@excalidraw/common";
@@ -21,11 +24,14 @@ import type {
 
 import type {
   BinaryFileData,
+  DataURL,
   ExcalidrawImperativeAPI,
 } from "@excalidraw/excalidraw/types";
 
+import { isImportableAssetFile } from "./assetTypes";
 import { blobToDataURL } from "./convert";
 import { getFolderEntry } from "./folderRegistry";
+import { generateFilePlaceholder } from "./placeholder";
 import { generateThumbnail } from "./thumbnail";
 
 import type { LinkedFileMeta, SyncFolderMeta } from "./types";
@@ -177,18 +183,34 @@ export const importNewFilesIntoFrame = async (
     try {
       const fileHandle = await entry.handle.getFileHandle(name);
       const file = await fileHandle.getFile();
-      if (!file.type.startsWith("image/")) {
-        continue;
-      }
+      const importable = isImportableAssetFile({
+        name,
+        mimeType: file.type || undefined,
+      });
 
-      const thumbnail = await generateThumbnail(await blobToDataURL(file));
+      // importable images get a real thumbnail of the content; everything
+      // else gets a generated file-icon placeholder so rename/duplicate/
+      // delete still work on the real file
+      let icon: { dataURL: DataURL; width: number; height: number };
+      let originalWidth: number;
+      let originalHeight: number;
+      if (importable) {
+        const thumbnail = await generateThumbnail(await blobToDataURL(file));
+        icon = thumbnail;
+        originalWidth = thumbnail.originalWidth;
+        originalHeight = thumbnail.originalHeight;
+      } else {
+        icon = generateFilePlaceholder(name);
+        originalWidth = icon.width;
+        originalHeight = icon.height;
+      }
       const fileId = randomId() as FileId;
 
       // scale to fit the grid cell, keeping aspect ratio
       const { width, height } = fitImageToCell(
         cellSize,
-        thumbnail.width,
-        thumbnail.height,
+        icon.width,
+        icon.height,
       );
 
       const gridIndex = existingChildren + index;
@@ -205,11 +227,12 @@ export const importNewFilesIntoFrame = async (
         folderId: syncFolder.folderId,
         relPath: name,
         fileSize: size,
-        mimeType: file.type,
+        mimeType: file.type || "application/octet-stream",
         displayName: name,
         status: "ok",
-        width: thumbnail.originalWidth,
-        height: thumbnail.originalHeight,
+        width: originalWidth,
+        height: originalHeight,
+        ...(importable ? {} : { placeholder: true as const }),
       };
 
       newElements.push(
@@ -229,7 +252,7 @@ export const importNewFilesIntoFrame = async (
       newFileData.push({
         id: fileId,
         mimeType: "image/webp",
-        dataURL: thumbnail.dataURL,
+        dataURL: icon.dataURL,
         created: Date.now(),
         lastRetrieved: Date.now(),
       });

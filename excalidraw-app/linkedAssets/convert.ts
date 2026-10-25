@@ -328,6 +328,14 @@ export const convertElementsToEmbedded = async (
 
   for (const element of candidates) {
     const linkedFile = element.customData!.linkedFile as LinkedFileMeta;
+    if (linkedFile.placeholder) {
+      // embedding the raw bytes of a non-image file would break rendering;
+      // the icon placeholder must stay linked
+      excalidrawAPI.setToast({
+        message: `"${linkedFile.displayName}" is a linked file placeholder and can't be embedded`,
+      });
+      continue;
+    }
     try {
       const entry = await getFolderEntry(linkedFile.folderId);
       if (!entry) {

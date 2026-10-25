@@ -35,6 +35,7 @@ import {
 import polyfill from "@excalidraw/excalidraw/polyfill";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadFromBlob } from "@excalidraw/excalidraw/data/blob";
+
 import { t } from "@excalidraw/excalidraw/i18n";
 
 import {
@@ -60,6 +61,8 @@ import {
   parseLibraryTokensFromUrl,
   useHandleLibrary,
 } from "@excalidraw/excalidraw/data/library";
+
+import type { ClipboardData } from "@excalidraw/excalidraw/clipboard";
 
 import type { RemoteExcalidrawElement } from "@excalidraw/excalidraw/data/reconcile";
 import type { RestoredDataState } from "@excalidraw/excalidraw/data/restore";
@@ -124,6 +127,7 @@ import { publishPdfSelection } from "./pdf/pdfSelectionStore";
 import { MediaToolbarItems } from "./media/MediaToolbarItems";
 import { ImageToolbarHost } from "./media/ImageToolbarHost";
 import { pickFile } from "./media/filePicker";
+import { maybeReplaceSelectedImage } from "./media/pasteReplaceImage";
 import { VideoEmbed } from "./video/VideoEmbed";
 import { importVideoFile, isSupportedVideoFile } from "./video/videoImport";
 import {
@@ -952,23 +956,69 @@ const ExcalidrawWrapper = () => {
       }
       const isPdf = (file: File) =>
         file.type === "application/pdf" ||
+        file.type === "application/x-pdf" ||
         file.name.toLowerCase().endsWith(".pdf");
-      const pdfFiles = files.filter(isPdf);
-      const videoFiles = files.filter(
-        (file) => !isPdf(file) && isSupportedVideoFile(file),
-      );
-      if (pdfFiles.length === 0 && videoFiles.length === 0) {
+      const media: Array<{ file: File; kind: "pdf" | "video" }> = [];
+      for (const file of files) {
+        if (isPdf(file)) {
+          media.push({ file, kind: "pdf" });
+        } else if (isSupportedVideoFile(file)) {
+          media.push({ file, kind: "video" });
+        }
+      }
+      if (media.length === 0) {
         return false;
       }
-      for (const file of pdfFiles) {
-        await importPdfFile(file, pos, excalidrawAPI);
-      }
-      for (const file of videoFiles) {
-        await importVideoFile(file, pos, excalidrawAPI);
+      // never let an import failure fall through to the library's default
+      // image path — that surfaces "Couldn't load invalid file" even though
+      // we recognized the file. Fail per-file with a toast instead.
+      let index = 0;
+      for (const { file, kind } of media) {
+        const dropPos = {
+          x: pos.x + (index % 6) * 48,
+          y: pos.y + (index % 6) * 48,
+        };
+        try {
+          if (kind === "pdf") {
+            await importPdfFile(file, dropPos, excalidrawAPI);
+          } else {
+            await importVideoFile(file, dropPos, excalidrawAPI);
+          }
+        } catch (error) {
+          console.warn("[media-import] dropped file import failed", error);
+          excalidrawAPI.setToast({ message: t("mediaImport.loadError") });
+        }
+        index++;
       }
       // consume the drop only when nothing is left for the default (image)
-      // handling
-      return pdfFiles.length + videoFiles.length === files.length;
+      // handling; a mixed drop (images + media) lets images flow through
+      return media.length === files.length;
+    },
+    [excalidrawAPI],
+  );
+
+  /**
+   * Paste-to-replace: a single selected image + a pasted image file → the
+   * pasted image replaces the selected one (fill-cropped to its box) instead
+   * of inserting a new element. Returning false tells the library the paste
+   * was consumed; anything else falls through to the default paste flow.
+   */
+  const onPasteHandler = useCallback(
+    async (
+      data: ClipboardData,
+      _event: ClipboardEvent | null,
+      files: readonly File[],
+    ): Promise<boolean> => {
+      if (!excalidrawAPI || data.elements?.length || !files.length) {
+        return true;
+      }
+      try {
+        const replaced = await maybeReplaceSelectedImage(files, excalidrawAPI);
+        return !replaced;
+      } catch (error) {
+        console.warn("[paste-replace] failed, falling back to insert", error);
+        return true;
+      }
     },
     [excalidrawAPI],
   );
@@ -1144,6 +1194,7 @@ const ExcalidrawWrapper = () => {
         onChange={onChange}
         onExport={onExport}
         onDropFiles={onDropFiles}
+        onPaste={onPasteHandler}
         renderEmbeddable={(element, appState) => {
           const kind = element.customData?.sourceFile?.kind;
           if (!excalidrawAPI) {

@@ -327,6 +327,7 @@ import {
   actionToggleMidpointSnapping,
   actionToggleCropEditor,
   actionDownloadOriginalImage,
+  actionCopyOriginalImage,
   actionDownloadSourceFile,
   actionExportHighestQualityPng,
   actionExportPdf,
@@ -4739,7 +4740,15 @@ class App extends React.Component<AppProps, AppState> {
 
       if (this.props.onPaste) {
         try {
-          if ((await this.props.onPaste(data, event)) === false) {
+          if (
+            (await this.props.onPaste(
+              data,
+              event,
+              filesList
+                .map((item) => item.file)
+                .filter((file): file is File => !!file),
+            )) === false
+          ) {
             return;
           }
         } catch (error: any) {
@@ -13922,6 +13931,7 @@ class App extends React.Component<AppProps, AppState> {
       CONTEXT_MENU_SEPARATOR,
       actionToggleCropEditor,
       actionDownloadOriginalImage,
+      actionCopyOriginalImage,
       actionDownloadSourceFile,
       actionExportHighestQualityPng,
       actionExportPdf,

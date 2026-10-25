@@ -35,6 +35,16 @@ export interface LinkedAssetsBridge {
     fileData: BinaryFileData,
   ) => Promise<DataURL | null>;
   /**
+   * like `resolveOriginal`, but may PROMPT for the folder's read permission —
+   * only call from a user gesture (menu/button click). Returns null when the
+   * folder handle is gone or the user denies the prompt; callers must surface
+   * a reconnect hint instead of silently downgrading to the thumbnail.
+   */
+  resolveOriginalInteractive?: (
+    fileId: FileId,
+    fileData: BinaryFileData,
+  ) => Promise<DataURL | null>;
+  /**
    * returns a copy of `files` with linked thumbnails replaced by their
    * originals (in-memory only, for PNG/SVG export)
    */

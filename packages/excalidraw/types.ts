@@ -835,6 +835,9 @@ export interface ExcalidrawProps {
   onPaste?: (
     data: ClipboardData,
     event: ClipboardEvent | null,
+    /** OS clipboard files of this paste (already extracted from the
+     *  dataTransfer, safe to read asynchronously) */
+    files: readonly File[],
   ) => Promise<boolean> | boolean;
   /**
    * Called when element(s) are duplicated so you can listen or modify as
